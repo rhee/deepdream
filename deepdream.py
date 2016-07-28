@@ -1,11 +1,27 @@
 # Source: Google Deepdream code @ https://github.com/google/deepdream/
 # Slightly modified in order to be run inside the container as a script instead of an IPython Notebook
 
+import sys, os
+
+if len(sys.argv) < 5:
+    sys.stderr.write('''
+Usage: [python] deepdream.py input iter scale model
+Example: python deepdream.py input.jpg 50 0.05 inception_4c/output
+
+Type deepdream.py --list-keys to view the model names
+''')
+    sys.exit(1)
+
+if len(sys.argv) >= 2 and '--list-keys' == sys.argv[1]:
+    print(net.blobs.keys())
+    sys.exit(0)
+
+
 from cStringIO import StringIO
 import numpy as np
 import scipy.ndimage as nd
 import PIL.Image
-import os
+
 from IPython.display import clear_output, Image, display
 from google.protobuf import text_format
 import time
@@ -16,26 +32,27 @@ def showarray(a):
     a = np.uint8(np.clip(a, 0, 255))
     f = StringIO()
     millis = int(round(time.time() * 1000))
-    filename = "/data/output/tmp/steps-%i.jpg" % millis
+    filename = "output/tmp/steps-%i.jpg" % millis
     PIL.Image.fromarray(np.uint8(a)).save(filename)
 
-input_file = os.getenv('INPUT', 'input.png')
-iterations = os.getenv('ITER', 50)
+input_file = sys.argv[1] #os.getenv('INPUT', 'input.png')
+iterations = int(sys.argv[2]) #os.getenv('ITER', 50)
+
 try:
     iterations = int(iterations)
 except ValueError:
     iterations = 50
 
-scale = os.getenv('SCALE', 0.05)
+scale = float(sys.argv[3]) #os.getenv('SCALE', 0.05)
 try:
     scale = float(scale)
 except ValueError:
     scale = 0.05
 
-model_name = os.getenv('MODEL', 'inception_4c/output')
+model_name = sys.argv[4] #os.getenv('MODEL', 'inception_4c/output')
 print "Processing file: " + input_file
 
-img = np.float32(PIL.Image.open('/data/%s' % input_file))
+img = np.float32(PIL.Image.open(input_file))
 
 model_path = '/caffe/models/bvlc_googlenet/' # substitute your path here
 net_fn   = model_path + 'deploy.prototxt'
@@ -121,20 +138,18 @@ def verifyModel(net, model):
 if not verifyModel(net, model_name):
     os._exit(1)
 
-if not os.path.exists("/data/output"):
-  os.mkdir("/data/output")
-
-if not os.path.exists("/data/output/tmp"):
-  os.mkdir("/data/output/tmp")
+# make /data/output, /data/output/tmp
+try: os.makedirs("output/tmp")
+except: pass
 
 print "This might take a little while..."
 print "Generating first sample..."
 step_one = deepdream(net, img)
-PIL.Image.fromarray(np.uint8(step_one)).save("/data/output/step_one.jpg")
+PIL.Image.fromarray(np.uint8(step_one)).save("output/step_one.jpg")
 
 print "Generating second sample..."
 step_two = deepdream(net, img, end='inception_3b/5x5_reduce')
-PIL.Image.fromarray(np.uint8(step_two)).save("/data/output/step_two.jpg")
+PIL.Image.fromarray(np.uint8(step_two)).save("output/step_two.jpg")
 
 frame = img
 frame_i = 0
@@ -148,7 +163,7 @@ print "Model = %s" % model_name
 for i in xrange(int(iterations)):
     print "Step %d of %d is starting..." % (i, int(iterations))
     frame = deepdream(net, frame, end=model_name)
-    PIL.Image.fromarray(np.uint8(frame)).save("/data/output/%04d.jpg"%frame_i)
+    PIL.Image.fromarray(np.uint8(frame)).save("output/%04d.jpg"%frame_i)
     frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
     frame_i += 1
     print "Step %d of %d is complete." % (i, int(iterations))
