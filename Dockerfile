@@ -18,15 +18,25 @@ RUN sed -i 's/^ACCEPT_EULA=decline/ACCEPT_EULA=accept/g' /tmp/install/l_mkl_11.3
 RUN cd /tmp/install/l_mkl_11.3.3.210; ./install.sh --silent ./silent.cfg
 RUN rm -fr /tmp/install
 
+# NOTE: fixed mkl paths as hardcoded
+ENV CPATH=/opt/intel/compilers_and_libraries_2016.3.210/linux/mkl/include
+ENV LIBRARY_PATH=/opt/intel/compilers_and_libraries_2016.3.210/linux/tbb/lib/intel64/gcc4.4:/opt/intel/compilers_and_libraries_2016.3.210/linux/compiler/lib/intel64:/opt/intel/compilers_and_libraries_2016.3.210/linux/mkl/lib/intel64:$LIBRARY_PATH
+ENV LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2016.3.210/linux/compiler/lib/intel64:/opt/intel/compilers_and_libraries_2016.3.210/linux/compiler/lib/intel64_lin:/opt/intel/compilers_and_libraries_2016.3.210/linux/tbb/lib/intel64/gcc4.4:/opt/intel/compilers_and_libraries_2016.3.210/linux/compiler/lib/intel64:/opt/intel/compilers_and_libraries_2016.3.210/linux/mkl/lib/intel64:$LD_LIBRARY_PATH
+ENV INTEL_LICENSE_FILE=/opt/intel/compilers_and_libraries_2016.3.210/linux/licenses:/opt/intel/licenses:/root/intel/licenses
+ENV PATH=/opt/intel/compilers_and_libraries_2016.3.210/linux/bin/intel64:$PATH
+ENV MKLROOT=/opt/intel/compilers_and_libraries_2016.3.210/linux/mkl
+ENV NLSPATH=/opt/intel/compilers_and_libraries_2016.3.210/linux/compiler/lib/intel64/locale/%l_%t/%N:/opt/intel/compilers_and_libraries_2016.3.210/linux/mkl/lib/intel64/locale/%l_%t/%N:$NLSPATH
+
 # Anaconda
 RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
     wget --quiet https://repo.continuum.io/archive/Anaconda2-4.1.1-Linux-x86_64.sh -O ~/anaconda.sh && \
     /bin/bash ~/anaconda.sh -b -p /opt/conda && \
     rm ~/anaconda.sh
 
+# path for rest 
 ENV PATH /opt/conda/bin:$PATH
 
-RUN /opt/conda/bin/conda install --offline numpy scipy
+#RUN /opt/conda/bin/conda install --offline numpy scipy
 
 # Caffe
 RUN git clone https://github.com/BVLC/caffe.git /caffe
@@ -50,12 +60,8 @@ RUN cp Makefile.config.example Makefile.config
 COPY Makefile.config.override Makefile.config.override
 RUN echo 'include Makefile.config.override' >> Makefile.config
 
-# mkl path set
-ENV COMPILERVARS_ARCHITECTURE=intel64
-ENV COMPILERVARS_PLATFORM=linux
-
 # finally, compile Caffe, pyCaffe
-RUN . /opt/intel/bin/compilervars.sh; make all; make pycaffe
+RUN make all; make pycaffe
 
 # cleanup
 RUN apt-get -y -q clean
@@ -65,11 +71,7 @@ ENV PYTHONPATH=/caffe/python
 # Download model
 RUN scripts/download_model_binary.py models/bvlc_googlenet
 
-COPY deepdream.py /
-COPY deepdream.sh /
-
+EXPOSE 8888
 VOLUME ["/data"]
 
 WORKDIR /data
-
-CMD ["/deepdream.sh", "input.jpg", "50", "0.05", "inception_4c/output"]
