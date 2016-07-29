@@ -4,12 +4,12 @@ MKL_NUM_THREADS=8
 MKL_DOMAIN_NUM_THREADS="MKL_DOMAIN_ALL=1, MKL_DOMAIN_BLAS=8"
 MKL_DYNAMIC=FALSE
 
-set -x
-
-guide=66f372.jpg
+guide=guide.jpg
 iter=200
 scale=0.05
 model=inception_3b/5x5_reduce
+
+set -x
 
 for input in "$@"; do
 
