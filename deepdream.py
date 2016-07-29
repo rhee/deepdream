@@ -154,10 +154,10 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
             make_step(net, end=end, clip=clip, **step_params)
 
             # visualization
-            vis = deprocess(net, src.data[0])
-            if not clip: # adjust image contrast if clipping is disabled
-                vis = vis*(255.0/np.percentile(vis, 99.98))
-            showarray(vis)
+            #vis = deprocess(net, src.data[0])
+            #if not clip: # adjust image contrast if clipping is disabled
+            #    vis = vis*(255.0/np.percentile(vis, 99.98))
+            #showarray(vis)
             print octave, i, end, vis.shape
             #clear_output(wait=True)
         # extract details produced on the current octave
@@ -171,15 +171,15 @@ guide_features = None
 guide_end = None
 
 if guide:
-	guide_end = 'inception_3b/output'
-	guide_image = np.float32(PIL.Image.open(args.guide))
-	#showarray(guide_image)
-	h, w = guide_image.shape[:2]
-	src, dst = net.blobs['data'], net.blobs[guide_end]
-	src.reshape(1,3,h,w)
-	src.data[0] = preprocess(net, guide_image)
-	net.forward(end=guide_end)
-	guide_features = dst.data[0].copy()
+    guide_end = 'inception_3b/output'
+    guide_image = np.float32(PIL.Image.open(args.guide))
+    #showarray(guide_image)
+    h, w = guide_image.shape[:2]
+    src, dst = net.blobs['data'], net.blobs[guide_end]
+    src.reshape(1,3,h,w)
+    src.data[0] = preprocess(net, guide_image)
+    net.forward(end=guide_end)
+    guide_features = dst.data[0].copy()
 
 def objective_guide(dst):
     x = dst.data[0].copy()
@@ -202,12 +202,19 @@ print "Model = %s" % model_name
 for i in xrange(int(iterations)):
     print "Step %d of %d is starting..." % (i, int(iterations))
     if guide_features is None:
-	frame = deepdream(net, frame) #, end=model_name)
+        frame = deepdream(net, frame) #, end=model_name)
     else:
-	frame = deepdream(net, frame, end=guide_end, objective=objective_guide)
+        frame = deepdream(net, frame, end=guide_end, objective=objective_guide)
     PIL.Image.fromarray(np.uint8(frame)).save("%s/%04d.jpg"%(output_dir, frame_i))
     frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
     frame_i += 1
     print "Step %d of %d is complete." % (i, int(iterations))
 
 print "All done! Check the " + output_dir + " folder for results"
+# Emacs:
+# Local Variables:
+# mode: python
+# c-basic-offset: 4
+# End:
+# vim: sw=4 sts=4 ts=8 et ft=python
+
