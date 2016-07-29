@@ -2,54 +2,58 @@
 # Slightly modified in order to be run inside the container as a script instead of an IPython Notebook
 
 import sys, os
+import argparse
 
-if len(sys.argv) < 5:
-    sys.stderr.write('''
-Usage: [python] deepdream.py input iter scale model
-Example: python deepdream.py input.jpg 50 0.05 inception_4c/output
+parser = argparse.ArgumentParser(description='deepdream demo')
+parser.add_argument('--output', type=str, nargs=1, default='output', help='Output directory')
+parser.add_argument('--list-keys', help='list model names')
+parser.add_argument('input', default='input.png')
+parser.add_argument('iter', default=50)
+parser.add_argument('scale', default=0.05)
+parser.add_argument('model', default='inception_4c/output')
 
-Type deepdream.py --list-keys to view the model names
-''')
-    sys.exit(1)
+args = parser.parse_args()
 
-if len(sys.argv) >= 2 and '--list-keys' == sys.argv[1]:
-    print(net.blobs.keys())
-    sys.exit(0)
-
+#if len(sys.argv) < 5:
+#    sys.stderr.write('''
+#Usage: [python] deepdream.py input iter scale model
+#Example: python deepdream.py input.jpg 50 0.05 inception_4c/output
+#
+#Type deepdream.py --list-keys to view the model names
+#''')
+#    sys.exit(1)
+#
+#if len(sys.argv) >= 2 and '--list-keys' == sys.argv[1]:
+#    print(net.blobs.keys())
+#    sys.exit(0)
 
 from cStringIO import StringIO
 import numpy as np
 import scipy.ndimage as nd
 import PIL.Image
 
-from IPython.display import clear_output, Image, display
+#from IPython.display import clear_output, Image, display
 from google.protobuf import text_format
 import time
 
 import caffe
 
-def showarray(a):
-    a = np.uint8(np.clip(a, 0, 255))
-    f = StringIO()
-    millis = int(round(time.time() * 1000))
-    filename = "output/tmp/steps-%i.jpg" % millis
-    PIL.Image.fromarray(np.uint8(a)).save(filename)
-
-input_file = sys.argv[1] #os.getenv('INPUT', 'input.png')
-iterations = int(sys.argv[2]) #os.getenv('ITER', 50)
+output_dir = args.output[0]
+input_file = args.input #os.getenv('INPUT', 'input.png')
+iterations = args.iter #os.getenv('ITER', 50)
 
 try:
     iterations = int(iterations)
 except ValueError:
     iterations = 50
 
-scale = float(sys.argv[3]) #os.getenv('SCALE', 0.05)
+scale = float(args.scale) #os.getenv('SCALE', 0.05)
 try:
     scale = float(scale)
 except ValueError:
     scale = 0.05
 
-model_name = sys.argv[4] #os.getenv('MODEL', 'inception_4c/output')
+model_name = args.model #os.getenv('MODEL', 'inception_4c/output')
 print "Processing file: " + input_file
 
 img = np.float32(PIL.Image.open(input_file))
@@ -58,16 +62,33 @@ model_path = '/caffe/models/bvlc_googlenet/' # substitute your path here
 net_fn   = model_path + 'deploy.prototxt'
 param_fn = model_path + 'bvlc_googlenet.caffemodel'
 
+# make /data/output, /data/output/tmp
+try: os.makedirs("%s/tmp" % (output_dir,))
+except: pass
+
 # Patching model to be able to compute gradients.
 # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
 model = caffe.io.caffe_pb2.NetParameter()
 text_format.Merge(open(net_fn).read(), model)
 model.force_backward = True
-open('tmp.prototxt', 'w').write(str(model))
+open('%s/tmp.prototxt' % (output_dir,), 'w').write(str(model))
 
-net = caffe.Classifier('tmp.prototxt', param_fn,
+net = caffe.Classifier('%s/tmp.prototxt' % (output_dir,), param_fn,
                        mean = np.float32([104.0, 116.0, 122.0]), # ImageNet mean, training set dependent
                        channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
+
+
+# now we can handle --list-keys
+if args.list_keys:
+    print(net.blobs.keys())
+    sys.exit(0)
+
+def showarray(a):
+    a = np.uint8(np.clip(a, 0, 255))
+    f = StringIO()
+    millis = int(round(time.time() * 1000))
+    filename = "%s/tmp/steps-%i.jpg" % (output_dir, millis)
+    PIL.Image.fromarray(np.uint8(a)).save(filename)
 
 # a couple of utility functions for converting to and from Caffe's input image layout
 def preprocess(net, img):
@@ -117,7 +138,7 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
                 vis = vis*(255.0/np.percentile(vis, 99.98))
             showarray(vis)
             print octave, i, end, vis.shape
-            clear_output(wait=True)
+            #clear_output(wait=True)
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
     # returning the resulting image
@@ -138,19 +159,6 @@ def verifyModel(net, model):
 if not verifyModel(net, model_name):
     os._exit(1)
 
-# make /data/output, /data/output/tmp
-try: os.makedirs("output/tmp")
-except: pass
-
-print "This might take a little while..."
-print "Generating first sample..."
-step_one = deepdream(net, img)
-PIL.Image.fromarray(np.uint8(step_one)).save("output/step_one.jpg")
-
-print "Generating second sample..."
-step_two = deepdream(net, img, end='inception_3b/5x5_reduce')
-PIL.Image.fromarray(np.uint8(step_two)).save("output/step_two.jpg")
-
 frame = img
 frame_i = 0
 
@@ -163,9 +171,9 @@ print "Model = %s" % model_name
 for i in xrange(int(iterations)):
     print "Step %d of %d is starting..." % (i, int(iterations))
     frame = deepdream(net, frame, end=model_name)
-    PIL.Image.fromarray(np.uint8(frame)).save("output/%04d.jpg"%frame_i)
+    PIL.Image.fromarray(np.uint8(frame)).save("%s/%04d.jpg"%(output_dir, frame_i))
     frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
     frame_i += 1
     print "Step %d of %d is complete." % (i, int(iterations))
 
-print "All done! Check the /output folder for results"
+print "All done! Check the " + output_dir + " folder for results"

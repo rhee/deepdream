@@ -1,0 +1,13 @@
+CPU_ONLY := 1
+BLAS := mkl
+ANACONDA_HOME := /opt/conda
+PYTHON_INCLUDE := $(ANACONDA_HOME)/include \
+                  $(ANACONDA_HOME)/include/python2.7 \
+                  $(ANACONDA_HOME)/lib/python2.7/site-packages/numpy/core/include
+
+PYTHON_LIB := $(ANACONDA_HOME)/lib
+ 
+# Whatever else you find you need goes here.
+INCLUDE_DIRS := $(PYTHON_INCLUDE) /usr/local/include
+LIBRARY_DIRS := $(PYTHON_LIB) /usr/local/lib /usr/lib
+
