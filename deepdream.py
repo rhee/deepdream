@@ -5,7 +5,8 @@ import sys, os
 import argparse
 
 parser = argparse.ArgumentParser(description='deepdream demo')
-parser.add_argument('--output', type=str, nargs=1, default='output', help='Output directory')
+parser.add_argument('--output', type=str, default='output', help='Output directory')
+parser.add_argument('--guide', type=str, default='', help='Guide image')
 parser.add_argument('--list-keys', help='list model names')
 parser.add_argument('input', default='input.png')
 parser.add_argument('iter', default=50)
@@ -38,7 +39,7 @@ import time
 
 import caffe
 
-output_dir = args.output[0]
+output_dir = args.output
 input_file = args.input #os.getenv('INPUT', 'input.png')
 iterations = args.iter #os.getenv('ITER', 50)
 
@@ -55,6 +56,8 @@ except ValueError:
 
 model_name = args.model #os.getenv('MODEL', 'inception_4c/output')
 print "Processing file: " + input_file
+
+guide = args.guide
 
 img = np.float32(PIL.Image.open(input_file))
 
@@ -77,6 +80,20 @@ net = caffe.Classifier('%s/tmp.prototxt' % (output_dir,), param_fn,
                        mean = np.float32([104.0, 116.0, 122.0]), # ImageNet mean, training set dependent
                        channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
 
+def verifyModel(net, model):
+    print "Verifying model: %s" % model
+    keys = net.blobs.keys()
+    if model in keys:
+        print "Model %s is valid." %model
+        return True
+    else:
+        print "Invalid model: %s.  Valid models are:" % model
+        for k in keys:
+            print k
+        return False
+
+if not verifyModel(net, model_name):
+    sys.exit(0) #os._exit(1)
 
 # now we can handle --list-keys
 if args.list_keys:
@@ -97,14 +114,18 @@ def preprocess(net, img):
 def deprocess(net, img):
     return np.dstack((img + net.transformer.mean['data'])[::-1])
 
-def make_step(net, step_size=1.5, end='inception_4c/output', jitter=32, clip=True):
+def objective_L2(dst):
+    dst.diff[:] = dst.data 
+
+def make_step(net, step_size=1.5, end='inception_4c/output', jitter=32, clip=True, objective=objective_L2):
     '''Basic gradient ascent step.'''
     src = net.blobs['data'] # input image is stored in Net's 'data' blob
     dst = net.blobs[end]
     ox, oy = np.random.randint(-jitter, jitter+1, 2)
     src.data[0] = np.roll(np.roll(src.data[0], ox, -1), oy, -2) # apply jitter shift
     net.forward(end=end)
-    dst.diff[:] = dst.data  # specify the optimization objective
+    #dst.diff[:] = dst.data  # specify the optimization objective
+    objective(dst) # specify the optimization objective
     net.backward(start=end)
     g = src.diff[0]
     # apply normalized ascent step to the input image
@@ -144,20 +165,30 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
     # returning the resulting image
     return deprocess(net, src.data[0])
 
-def verifyModel(net, model):
-    print "Verifying model: %s" % model
-    keys = net.blobs.keys()
-    if model in keys:
-        print "Model %s is valid." %model
-        return True
-    else:
-        print "Invalid model: %s.  Valid models are:" % model
-        for k in keys:
-            print k
-        return False
 
-if not verifyModel(net, model_name):
-    os._exit(1)
+# guide
+guide_features = None
+guide_end = None
+
+if guide:
+	guide_end = 'inception_3b/output'
+	guide_image = np.float32(PIL.Image.open(args.guide))
+	#showarray(guide_image)
+	h, w = guide_image.shape[:2]
+	src, dst = net.blobs['data'], net.blobs[guide_end]
+	src.reshape(1,3,h,w)
+	src.data[0] = preprocess(net, guide_image)
+	net.forward(end=guide_end)
+	guide_features = dst.data[0].copy()
+
+def objective_guide(dst):
+    x = dst.data[0].copy()
+    y = guide_features
+    ch = x.shape[0]
+    x = x.reshape(ch,-1)
+    y = y.reshape(ch,-1)
+    A = x.T.dot(y) # compute the matrix of dot-products with guide features
+    dst.diff[0].reshape(ch,-1)[:] = y[:,A.argmax(1)] # select ones that match best
 
 frame = img
 frame_i = 0
@@ -170,7 +201,10 @@ print "Scale = %s" % scale
 print "Model = %s" % model_name
 for i in xrange(int(iterations)):
     print "Step %d of %d is starting..." % (i, int(iterations))
-    frame = deepdream(net, frame, end=model_name)
+    if guide_features is None:
+	frame = deepdream(net, frame) #, end=model_name)
+    else:
+	frame = deepdream(net, frame, end=guide_end, objective=objective_guide)
     PIL.Image.fromarray(np.uint8(frame)).save("%s/%04d.jpg"%(output_dir, frame_i))
     frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
     frame_i += 1

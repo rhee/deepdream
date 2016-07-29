@@ -63,7 +63,8 @@ RUN echo 'include Makefile.config.override' >> Makefile.config
 # finally, compile Caffe, pyCaffe
 RUN make all; make pycaffe
 
-# cleanup
+# update, cleanup
+RUN conda install notebook ipython-notebook
 RUN apt-get -y -q clean
 
 ENV PYTHONPATH=/caffe/python
@@ -71,7 +72,7 @@ ENV PYTHONPATH=/caffe/python
 # Download model
 RUN scripts/download_model_binary.py models/bvlc_googlenet
 
-EXPOSE 8888
+#EXPOSE 8888
 VOLUME ["/data"]
 
 WORKDIR /data

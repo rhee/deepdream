@@ -1,14 +1,15 @@
 :
 
-#MKL_NUM_THREADS=8
-#MKL_DOMAIN_NUM_THREADS="MKL_DOMAIN_ALL=1, MKL_DOMAIN_BLAS=8"
-#MKL_DYNAMIC=FALSE
-
-MKL_NUM_THREADS=4
-MKL_DOMAIN_NUM_THREADS="MKL_DOMAIN_ALL=1, MKL_DOMAIN_BLAS=4"
+MKL_NUM_THREADS=8
+MKL_DOMAIN_NUM_THREADS="MKL_DOMAIN_ALL=1, MKL_DOMAIN_BLAS=8"
 MKL_DYNAMIC=FALSE
 
 set -x
+
+guide=66f372.jpg
+iter=200
+scale=0.05
+model=inception_3b/5x5_reduce
 
 for input in "$@"; do
 
@@ -20,6 +21,6 @@ for input in "$@"; do
     -e MKL_DOMAIN_NUM_THREADS="$MKL_DOMAIN_NUM_THREADS" \
     -e MKL_DYNAMIC=$MKL_DYNAMIC \
     -v "$PWD":/data \
-    rhee/deepdream python -u /data/deepdream.py --output=$b.output $input 200 0.10 inception_3b/5x5_reduce
+    rhee/deepdream python -u /data/deepdream.py --output=$b.output --guide=$guide $input $iter $scale $model
 
 done
