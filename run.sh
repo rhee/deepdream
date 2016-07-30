@@ -1,5 +1,8 @@
 :
 
+setopt shwordsplit 2>/dev/null
+shopt -s nullglob 2>/dev/null
+
 MKL_NUM_THREADS=8
 MKL_DOMAIN_NUM_THREADS="MKL_DOMAIN_ALL=1, MKL_DOMAIN_BLAS=8"
 MKL_DYNAMIC=FALSE
