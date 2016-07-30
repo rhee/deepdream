@@ -30,6 +30,6 @@ for input in "$@"; do
     -v "$PWD":/data \
     rhee/deepdream python -u /data/deepdream.py --output=$b.output $input $iter $scale $model $guide
 
-  sh run-cleanup.sh "$input"
+  ./cleanup.sh "$input"
 
 done
