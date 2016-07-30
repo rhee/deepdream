@@ -65,10 +65,9 @@ net = caffe.Classifier('%s/tmp.prototxt' % (output_dir,), param_fn,
                        channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
 
 # verify model name provided
-if not model_name in keys.net.blobs.keys():
+if not model_name in net.blobs.keys():
     sys.stderr.write('Invalid model name: %s' % (model_name,) + '\n')
-    sys.stderr.write('Valid models are:' + '\n')
-    sys.stderr.write(k + '\n') for k in keys.net.blobs.keys()
+    sys.stderr.write('Valid models are:' + repr(net.blobs.keys()) + '\n')
     sys.exit(-1)
 
 if guide:
@@ -158,10 +157,13 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
             #showarray(vis)
             #clear_output(wait=True)
 
-            print octave, i, end #, vis.shape
+            #print octave, i, end #, vis.shape
+
+        print octave, '*', end #, vis.shape
 
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
+
     # returning the resulting image
     return deprocess(net, src.data[0])
 
