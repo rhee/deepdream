@@ -66,9 +66,9 @@ model = caffe.io.caffe_pb2.NetParameter()
 text_format.Merge(open(net_fn).read(), model)
 model.force_backward = True
 
-open('%s/tmp.prototxt' % (output_dir,), 'w').write(str(model))
+open('%s/prototxt' % (output_dir,), 'w').write(str(model))
 
-net = caffe.Classifier('%s/tmp.prototxt' % (output_dir,), param_fn,
+net = caffe.Classifier('%s/prototxt' % (output_dir,), param_fn,
                        mean = np.float32([104.0, 116.0, 122.0]), # ImageNet mean, training set dependent
                        channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
 
