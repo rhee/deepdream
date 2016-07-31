@@ -6,6 +6,7 @@ shopt -s nullglob 2>/dev/null
 MKL_NUM_THREADS=8
 MKL_DOMAIN_NUM_THREADS="MKL_DOMAIN_ALL=1, MKL_DOMAIN_BLAS=8"
 MKL_DYNAMIC=FALSE
+export MKL_NUM_THREADS MKL_DOMAIN_NUM_THREADS MKL_DYNAMIC
 
 # lower level than the defualt inception_4c/output,
 # gets more patternish output
@@ -28,13 +29,7 @@ for input in "$@"; do
 
   b=$(basename $input .jpg)
 
-  sudo --set-home docker run \
-    --rm \
-    -e MKL_NUM_THREADS=$MKL_NUM_THREADS \
-    -e MKL_DOMAIN_NUM_THREADS="$MKL_DOMAIN_NUM_THREADS" \
-    -e MKL_DYNAMIC=$MKL_DYNAMIC \
-    -v "$PWD":/data \
-    rhee/deepdream python -u /data/deepdream.py --output=$b.output $input $iter $scale $model $guide
+  python -u /data/deepdream.py --output=$b.output $input $iter $scale $model $guide
 
   ./cleanup.sh "$input"
 
