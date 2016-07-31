@@ -3,6 +3,7 @@
 
 import sys, os
 import argparse
+import nperf
 
 parser = argparse.ArgumentParser(description='deepdream demo')
 parser.add_argument('--output', type=str, default='output', help='Output directory')
@@ -24,6 +25,8 @@ import time
 
 import caffe
 
+perf_check = nperf.nperf()
+
 ###
 
 model_path = '/caffe/models/bvlc_googlenet/' # substitute your path here
@@ -36,7 +39,7 @@ models_nice = [
     'inception_5a/output'
 ]
 
-models_choice = 0
+models_choice = np.random.randint(0,len(models_nice))
 
 ###
 
@@ -169,7 +172,12 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
 
             #print(octave, i, end #, vis.shape)
 
-        print(octave, '*', end) #, vis.shape
+	    def print_out(count, tlap):
+		print 'snapshot:', octave, i, end
+
+	    perf_check.check('deepdream', print_out)
+
+        #print(octave, '*', end) #, vis.shape
 
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
@@ -190,7 +198,8 @@ for i in xrange(int(iterations)):
     #print "Step %d of %d is starting..." % (i, int(iterations))
 
     if 'auto' == model_name:
-        models_choice = np.random.randint(0,len(models_nice))
+	if np.random.randint(0, 120) == 0:
+            models_choice = np.random.randint(0,len(models_nice))
         end = models_nice[models_choice]
     else:
         end = model_name
