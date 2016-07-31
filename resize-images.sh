@@ -6,5 +6,6 @@ fi
 input="$1"
 output="$2"
 geometry="$3"
-test -z "$geometry" && geometry=1024x576
-convert "$input" -colorspace RGB -resize 2048x1152\< -resize $geometry\> -gravity center -extent $geometry -colorspace sRGB "$output"
+test -z "$geometry" && geometry=640x360
+# enlarge to max (3840x2160), shrink to cover geometry, center crop by geometry
+convert "$input" -colorspace RGB -resize 3840x2160\< -resize $geometry\> -gravity center -extent $geometry -colorspace sRGB "$output"
