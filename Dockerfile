@@ -69,6 +69,10 @@ RUN apt-get -y -q clean
 
 ENV PYTHONPATH=/caffe/python
 
+ENV MKL_NUM_THREADS=8
+ENV MKL_DOMAIN_NUM_THREADS="MKL_DOMAIN_ALL=1, MKL_DOMAIN_BLAS=8"
+ENV MKL_DYNAMIC=FALSE
+
 # Download model
 RUN scripts/download_model_binary.py models/bvlc_googlenet
 
