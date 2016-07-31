@@ -6,7 +6,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='deepdream demo')
 parser.add_argument('--output', type=str, default='output', help='Output directory')
-parser.add_argument('--model', type=str, default='inception_4c/output', help='Model network name')
+parser.add_argument('--model', type=str, default='auto', help='Model network name')
 parser.add_argument('--guide', type=str, default='', help='Guide image')
 parser.add_argument('input_file', default='input.png')
 parser.add_argument('iterations', default=50)
@@ -30,6 +30,14 @@ model_path = '/caffe/models/bvlc_googlenet/' # substitute your path here
 net_fn   = model_path + 'deploy.prototxt'
 param_fn = model_path + 'bvlc_googlenet.caffemodel'
 
+models_nice = [
+    'inception_4c/output',
+    'inception_4d/output',
+    'inception_5a/output'
+]
+
+models_choice = 0
+
 ###
 
 output_dir = args.output
@@ -45,10 +53,10 @@ scale = args.scale
 try: os.makedirs("%s/tmp" % (output_dir,))
 except: pass
 
-print "Processing file: " + input_file
-print "Iterations = %s" % iterations
-print "Scale = %s" % scale
-print "Model = %s" % model_name
+print("Processing file: " + input_file)
+print("Iterations = %s" % iterations)
+print("Scale = %s" % scale)
+print("Model = %s" % model_name)
 
 img = np.float32(PIL.Image.open(input_file))
 
@@ -65,12 +73,14 @@ net = caffe.Classifier('%s/tmp.prototxt' % (output_dir,), param_fn,
                        channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
 
 # verify model name provided
-if not model_name in net.blobs.keys():
-    sys.stderr.write('Invalid model name: %s' % (model_name,) + '\n')
-    sys.stderr.write('Valid models are:' + repr(net.blobs.keys()) + '\n')
-    sys.exit(-1)
+if 'auto' != model_name:
 
-if guide:
+    if not model_name in net.blobs.keys():
+        sys.stderr.write('Invalid model name: %s' % (model_name,) + '\n')
+        sys.stderr.write('Valid models are:' + repr(net.blobs.keys()) + '\n')
+        sys.exit(-1)
+
+if 'auto' != model_name and guide:
 
     guide_image = np.float32(PIL.Image.open(guide))
     h, w = guide_image.shape[:2]
@@ -157,9 +167,9 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
             #showarray(vis)
             #clear_output(wait=True)
 
-            #print octave, i, end #, vis.shape
+            #print(octave, i, end #, vis.shape)
 
-        print octave, '*', end #, vis.shape
+        print(octave, '*', end) #, vis.shape
 
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
@@ -167,21 +177,34 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
     # returning the resulting image
     return deprocess(net, src.data[0])
 
+frame_i = 1
+
 frame = img
-frame_i = 0
+PIL.Image.fromarray(np.uint8(frame)).save("%s/%04d.jpg"%(output_dir, frame_i))
+frame_i += 1
 
 h, w = frame.shape[:2]
 s = float(scale) # scale coefficient
 
 for i in xrange(int(iterations)):
-    print "Step %d of %d is starting..." % (i, int(iterations))
-    frame = deepdream(net, frame, end=model_name, objective=objective)
-    PIL.Image.fromarray(np.uint8(frame)).save("%s/%04d.jpg"%(output_dir, frame_i))
-    frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
-    frame_i += 1
-    print "Step %d of %d is complete." % (i, int(iterations))
+    #print "Step %d of %d is starting..." % (i, int(iterations))
 
-print "All done! Check the " + output_dir + " folder for results"
+    if 'auto' == model_name:
+        models_choice = np.random.randint(0,len(models_nice))
+        end = models_nice[models_choice]
+    else:
+        end = model_name
+
+    frame = deepdream(net, frame, end=end, objective=objective)
+    PIL.Image.fromarray(np.uint8(frame)).save("%s/%04d.jpg"%(output_dir, frame_i))
+    frame_i += 1
+
+    frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
+
+    print("Step %d of %d is complete." % (i, int(iterations)))
+
+#print "All done! Check the " + output_dir + " folder for results"
+
 # Emacs:
 # Local Variables:
 # mode: python

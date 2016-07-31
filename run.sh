@@ -10,7 +10,10 @@ MKL_DYNAMIC=FALSE
 # lower level than the defualt inception_4c/output,
 # gets more patternish output
 #model=--model=inception_3b/5x5_reduce
-model=--model=inception_4a/output
+
+#model=--model=inception_4c/output
+#model=--model=inception_4d/output
+#model=--model=inception_5a/output
 
 # guide image binds the result, not an interesting
 #guide=--guide=guide.jpg
