@@ -7,4 +7,4 @@ input="$1"
 output="$2"
 geometry="$3"
 test -z "$geometry" && geometry=1024x576
-convert "$input" -colorspace RGB -resize 2048x1152\> -resize $geometry\> -gravity center -extent $geometry -colorspace sRGB "$output"
+convert "$input" -colorspace RGB -resize 2048x1152\< -resize $geometry\> -gravity center -extent $geometry -colorspace sRGB "$output"
