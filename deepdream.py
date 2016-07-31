@@ -25,7 +25,7 @@ import time
 
 import caffe
 
-perf_check = nperf.nperf()
+check = nperf.nperf(interval = 60.0)
 
 ###
 
@@ -175,7 +175,7 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
 	    def print_out(count, tlap):
 		print 'snapshot:', octave, i, end
 
-	    perf_check.check('deepdream', print_out)
+	    check.check('deepdream', print_out)
 
         #print(octave, '*', end) #, vis.shape
 

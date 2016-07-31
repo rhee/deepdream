@@ -76,6 +76,10 @@ ENV MKL_DYNAMIC=FALSE
 # Download model
 RUN scripts/download_model_binary.py models/bvlc_googlenet
 
+# more extra utilities
+RUN apt-get -y -q install imagemagick libav-tools
+RUN apt-get -y -q clean
+
 #EXPOSE 8888
 VOLUME ["/data"]
 
