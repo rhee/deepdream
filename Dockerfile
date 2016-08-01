@@ -82,7 +82,12 @@ RUN apt-get -y -q clean
 
 # install ffmpeg static rather than libav-tools
 ADD http://johnvansickle.com/ffmpeg/builds/ffmpeg-git-64bit-static.tar.xz /tmp
-RUN tar xJ -v -f /tmp/ffmpeg-git-64bit-static.tar.xz -C /opt && ln -s /opt/ffmpeg-git-20160731-64bit-static/ffmpeg /usr/local/bin
+RUN tar xJ -v -f /tmp/ffmpeg-git-64bit-static.tar.xz -C /opt && rm -fv /tmp/ffmpeg-git-64bit-static.tar.xz && ln -s /opt/ffmpeg-git-20160731-64bit-static/ffmpeg /usr/local/bin
+
+# install node-lts
+ADD https://nodejs.org/dist/v4.4.7/node-v4.4.7-linux-x64.tar.xz /tmp
+RUN tar xJ -v -f /tmp/node-v4.4.7-linux-x64.tar.xz -C /opt && rm -fv /tmp/node-v4.4.7-linux-x64.tar.xz && mkdir -p /etc/profile.d && echo 'PATH=/opt/node-v4.4.7-linux-x64/bin:$PATH; export PATH' > /etc/profile.d/node-lts.sh
+ENV PATH=/opt/node-v4.4.7-linux-x64/bin:$PATH
 
 #EXPOSE 8888
 VOLUME ["/data"]
