@@ -52,8 +52,9 @@ scale = args.scale
 
 ###
 
-# make /data/output, /data/output/tmp
-try: os.makedirs("%s/tmp" % (output_dir,))
+# make /data/output
+
+try: os.makedirs(output_dir)
 except: pass
 
 print("Processing file: " + input_file)
@@ -112,13 +113,6 @@ else:
         dst.diff[:] = dst.data 
 
     objective = objective_L2
-
-#def showarray(a):
-#    a = np.uint8(np.clip(a, 0, 255))
-#    f = StringIO()
-#    millis = int(round(time.time() * 1000))
-#    filename = "%s/tmp/steps-%i.jpg" % (output_dir, millis)
-#    PIL.Image.fromarray(np.uint8(a)).save(filename)
 
 # a couple of utility functions for converting to and from Caffe's input image layout
 def preprocess(net, img):
