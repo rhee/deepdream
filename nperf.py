@@ -11,8 +11,8 @@ class nperf:
     interval = 5.0
 
     def __init__(self, interval = 5.0, maxcount = 0):
-	self.interval = interval
-	self.maxcount = maxcount
+        self.interval = interval
+        self.maxcount = maxcount
         self.count=self.lastcount=0
         self.tstart=time.time()
 
@@ -27,12 +27,12 @@ class nperf:
                 eta_m = int(eta / 60)
                 eta_s = eta % 60
                 sys.stderr.write(
-		    '%s count: %d/%d, elapsed %.1f speed %.1f steps/sec, eta %d:%02d' %
+                    '%s count: %d/%d, elapsed %.1f speed %.1f steps/sec, eta %d:%02d' %
                     (tag, self.count, self.maxcount, telapsed, cps, eta_m, eta_s) + '\n')
             else:
                 sys.stderr.write(
-		    '%s count: %d, elapsed %.1f speed %.1f steps/sec' %
-		    (tag, self.count, telapsed, cps) + '\n')
+                '%s count: %d, elapsed %.1f speed %.1f steps/sec' %
+                (tag, self.count, telapsed, cps) + '\n')
 
             self.lastcount=self.count
             self.tstart=tlap
