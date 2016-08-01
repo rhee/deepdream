@@ -27,8 +27,10 @@ docker build -t rhee/deepdream .
 
 ## Running
 
+Save image to start to project directory, and then run:
+
 ```
-./run.sh imagename.jpg
+./run.sh <imagename>.jpg
 ```
 
 see `run-docker.sh` to check options related to `docker`.
@@ -36,5 +38,4 @@ see `run.sh` to check `deepdream.py` options.
 
 *Note*: Depending on how much memory your machine has, you might run into problems with high-res images. In my case, processing failed for a 12mp image. Either stick to smaller images or buy more RAM ;-)
 
-
-The output of the script will be written to the `output/` subfolder. Enjoy!
+The output of the script will be written to the `<imagename>.output.mp4` file. Enjoy!
