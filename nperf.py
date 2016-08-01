@@ -16,7 +16,7 @@ class nperf:
         self.count=self.lastcount=0
         self.tstart=time.time()
 
-    def check(self, tag = 'nperf', callback = None):
+    def __call__(self, tag = 'nperf', callback = None):
         self.count += 1
         tlap = time.time()
         telapsed = tlap - self.tstart
@@ -41,11 +41,11 @@ class nperf:
                 callback(self.count, tlap)
 
 if '__main__' == __name__:
-    check = nperf(interval = 5.0, maxcount=1000)
-    for i in range(1000):
+    check = nperf(interval = 5.0, maxcount=250)
+    for i in range(250):
         def callback(count, tlap):
             print 'callback: ', i, count, tlap
-        check.check('hello', callback)
+        check('hello', callback)
         time.sleep(0.1)
 
 # Emacs:
