@@ -41,5 +41,5 @@ The output of the script will be written to the `<imagename>.output.mp4` file.
 
 Comment on the memory requirements from [herval/deepdream-docker](https://github.com/herval/deepdream-docker):
 
-*Note*: Depending on how much memory your machine has, you might run into problems with high-res images. In my case, processing failed for a 12mp image. Either stick to smaller images or buy more RAM ;-)
+    *Note*: Depending on how much memory your machine has, you might run into problems with high-res images. In my case, processing failed for a 12mp image. Either stick to smaller images or buy more RAM ;-)
 
