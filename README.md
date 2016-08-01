@@ -1,8 +1,8 @@
 # Google Deepdream + Docker
 
-This project is forked from herval/deepdream-docker, and the description from the origin follows:
+This project is forked from [herval/deepdream-docker](https://github.com/herval/deepdream-docker), and the description from the origin follows:
 
-A Docker Container to run Google's [Deepdream](https://github.com/google/deepdream/). This avoids having to setup all the dependencies (including GPU drivers, Python, Caffe, etc) in your OS of choice, so you can skip right to the fun part!
+> A Docker Container to run Google's [Deepdream](https://github.com/google/deepdream/). This avoids having to setup all the dependencies (including GPU drivers, Python, Caffe, etc) in your OS of choice, so you can skip right to the fun part!
 
 
 ## Installing
@@ -34,8 +34,12 @@ Save image to start to project directory, and then run:
 ```
 
 see `run-docker.sh` to check options related to `docker`.
+
 see `run.sh` to check `deepdream.py` options.
 
-*Note*: Depending on how much memory your machine has, you might run into problems with high-res images. In my case, processing failed for a 12mp image. Either stick to smaller images or buy more RAM ;-)
+The output of the script will be written to the `<imagename>.output.mp4` file.
 
-The output of the script will be written to the `<imagename>.output.mp4` file. Enjoy!
+Comment on the memory requirements from [herval/deepdream-docker](https://github.com/herval/deepdream-docker):
+
+> *Note*: Depending on how much memory your machine has, you might run into problems with high-res images. In my case, processing failed for a 12mp image. Either stick to smaller images or buy more RAM ;-)
+
