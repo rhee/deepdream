@@ -29,7 +29,8 @@ check = nperf.nperf(interval = 60.0)
 
 ###
 
-model_path = '/caffe/models/bvlc_googlenet/' # substitute your path here
+caffe_home = os.getenv('CAFFE_HOME')
+model_path = caffe_home + '/models/bvlc_googlenet/' # substitute your path here
 net_fn   = model_path + 'deploy.prototxt'
 param_fn = model_path + 'bvlc_googlenet.caffemodel'
 

@@ -89,6 +89,8 @@ ADD https://nodejs.org/dist/v4.4.7/node-v4.4.7-linux-x64.tar.xz /tmp
 RUN tar xJ -v -f /tmp/node-v4.4.7-linux-x64.tar.xz -C /opt && rm -fv /tmp/node-v4.4.7-linux-x64.tar.xz && mkdir -p /etc/profile.d && echo 'PATH=/opt/node-v4.4.7-linux-x64/bin:$PATH; export PATH' > /etc/profile.d/node-lts.sh
 ENV PATH=/opt/node-v4.4.7-linux-x64/bin:$PATH
 
+ENV CAFFE_HOME=/caffe
+
 #EXPOSE 8888
 VOLUME ["/data"]
 
