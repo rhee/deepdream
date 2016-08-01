@@ -77,8 +77,12 @@ ENV MKL_DYNAMIC=FALSE
 RUN scripts/download_model_binary.py models/bvlc_googlenet
 
 # more extra utilities
-RUN apt-get -y -q install imagemagick libav-tools
+RUN apt-get -y -q install imagemagick
 RUN apt-get -y -q clean
+
+# install ffmpeg static rather than libav-tools
+ADD http://johnvansickle.com/ffmpeg/builds/ffmpeg-git-64bit-static.tar.xz /tmp
+RUN tar xJ -v -f /tmp/ffmpeg-git-64bit-static.tar.xz -C /opt && ln -s /opt/ffmpeg-git-20160731-64bit-static/ffmpeg /usr/local/bin
 
 #EXPOSE 8888
 VOLUME ["/data"]
