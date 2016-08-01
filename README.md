@@ -10,7 +10,7 @@ A Docker Container to run Google's [Deepdream](https://github.com/google/deepdre
 Requirements:
 
 - [Docker](https://www.docker.com/).
-- Intel(r) Math Kernel Library - You can register/download Non-comercial/Evaluation version from ([Intel Math Kernel Library Page](https://software.intel.com/en-us/intel-mkl/)
+- Intel(r) Math Kernel Library - You can register/download Non-comercial/Evaluation version from [Intel Math Kernel Library Page](https://software.intel.com/en-us/intel-mkl/)
     - Save the downloaded tgz file as `l_mkl_11.3.3.210.tgz` in build directory
     - Save the downloaded license file as `intel_mkl.lic` in build directory
     - You may want to change to downloaded tgz file name in `Dockerfile` if your downloaded file name not matches
