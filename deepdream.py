@@ -189,8 +189,25 @@ frame_i += 1
 h, w = frame.shape[:2]
 s = float(scale) # scale coefficient
 
+recovery_mode = False
+
 for i in xrange(int(iterations)):
     #print "Step %d of %d is starting..." % (i, int(iterations))
+
+    step_output_file = "%s/%04d.jpg"%(output_dir, frame_i)
+
+    if os.path.exists(step_output_file):
+        if not recovery_mode:
+            recovery_mode = True
+            sys.stderr.write('Found previous output. Assume recovery mode.' + '\n')
+        frame_i += 1
+        continue
+
+    if recovery_mode and not os.path.exists(step_output_file):
+        last_output_file = "%s/%04d.jpg"%(output_dir, frame_i - 1)
+        frame = np.float32(PIL.Image.open(last_output_file))
+        frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
+        sys.stderr.write('recovery_mode: continue from ' + step_output_file + '\n')
 
     if 'auto' == model_name:
 	if np.random.randint(0, 120) == 0:
@@ -200,7 +217,7 @@ for i in xrange(int(iterations)):
         end = model_name
 
     frame = deepdream(net, frame, end=end, objective=objective)
-    PIL.Image.fromarray(np.uint8(frame)).save("%s/%04d.jpg"%(output_dir, frame_i))
+    PIL.Image.fromarray(np.uint8(frame)).save(step_output_file)
     frame_i += 1
 
     frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
