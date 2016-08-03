@@ -25,6 +25,16 @@ import time
 
 import caffe
 
+
+# try enable GPU
+try:
+    GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
+    caffe.set_mode_gpu()
+    caffe.set_device(GPU_ID)
+except:
+    pass
+
+
 check = nperf.nperf(interval = 60.0)
 
 ###
@@ -208,6 +218,7 @@ for i in xrange(int(iterations)):
         frame = np.float32(PIL.Image.open(last_output_file))
         frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
         sys.stderr.write('recovery_mode: continue from ' + step_output_file + '\n')
+	recovery_mode = False
 
     if 'auto' == model_name:
 	if np.random.randint(0, 120) == 0:
