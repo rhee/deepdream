@@ -36,7 +36,8 @@ if os.getenv('CUDA_ENABLED'):
         pass
 
 
-check = nperf.nperf(interval = 60.0)
+check1 = nperf.nperf(interval = 60.0)
+check2 = nperf.nperf(interval = 60.0)
 
 ###
 
@@ -167,10 +168,12 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
         def print_out(count, tlap):
             print 'snapshot:', octave, i, end
 
-        check('deepdream', print_out)
+        check1('octave', print_out)
 
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
+
+    check2('deepdream', print_out)
 
     # returning the resulting image
     return deprocess(net, src.data[0])
