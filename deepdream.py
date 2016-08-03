@@ -3,7 +3,7 @@
 
 import sys, os
 import argparse
-from nperf.nperf import nperf
+import nperf
 
 parser = argparse.ArgumentParser(description='deepdream demo')
 parser.add_argument('--output', type=str, default='output', help='Output directory')
@@ -26,13 +26,13 @@ import time
 import caffe
 
 
-# try enable GPU
-try:
-    GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
-    caffe.set_mode_gpu()
-    caffe.set_device(GPU_ID)
-except:
-    pass
+# # try enable GPU
+# try:
+#     GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
+#     caffe.set_mode_gpu()
+#     caffe.set_device(GPU_ID)
+# except:
+#     pass
 
 
 check = nperf.nperf(interval = 60.0)
@@ -89,14 +89,12 @@ net = caffe.Classifier('%s/prototxt' % (output_dir,), param_fn,
 
 # verify model name provided
 if 'auto' != model_name:
-
     if not model_name in net.blobs.keys():
         sys.stderr.write('Invalid model name: %s' % (model_name,) + '\n')
         sys.stderr.write('Valid models are:' + repr(net.blobs.keys()) + '\n')
         sys.exit(-1)
-
+        
 if 'auto' != model_name and guide:
-
     guide_image = np.float32(PIL.Image.open(guide))
     h, w = guide_image.shape[:2]
     src, dst = net.blobs['data'], net.blobs[model_name]
@@ -115,14 +113,11 @@ if 'auto' != model_name and guide:
         y = y.reshape(ch,-1)
         A = x.T.dot(y) # compute the matrix of dot-products with guide features
         dst.diff[0].reshape(ch,-1)[:] = y[:,A.argmax(1)] # select ones that match best
-
     objective = objective_guide
-
+    
 else:
-
     def objective_L2(dst):
         dst.diff[:] = dst.data 
-
     objective = objective_L2
 
 # a couple of utility functions for converting to and from Caffe's input image layout
@@ -168,21 +163,10 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
         for i in xrange(iter_n):
             make_step(net, end=end, clip=clip, **step_params)
 
-            # visualization
-            #vis = deprocess(net, src.data[0])
-            #if not clip: # adjust image contrast if clipping is disabled
-            #    vis = vis*(255.0/np.percentile(vis, 99.98))
-            #showarray(vis)
-            #clear_output(wait=True)
+        def print_out(count, tlap):
+            print 'snapshot:', octave, i, end
 
-            #print(octave, i, end #, vis.shape)
-
-	    def print_out(count, tlap):
-		print 'snapshot:', octave, i, end
-
-	    check('deepdream', print_out)
-
-        #print(octave, '*', end) #, vis.shape
+        check('deepdream', print_out)
 
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
@@ -204,6 +188,13 @@ recovery_mode = False
 for i in xrange(int(iterations)):
     #print "Step %d of %d is starting..." % (i, int(iterations))
 
+    if 'auto' == model_name:
+        if np.random.randint(0, 120) == 0:
+            models_choice = np.random.randint(0,len(models_nice))
+            end = models_nice[models_choice]
+    else:
+        end = model_name
+
     step_output_file = "%s/%04d.jpg"%(output_dir, frame_i)
 
     if os.path.exists(step_output_file):
@@ -217,15 +208,8 @@ for i in xrange(int(iterations)):
         last_output_file = "%s/%04d.jpg"%(output_dir, frame_i - 1)
         frame = np.float32(PIL.Image.open(last_output_file))
         frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
+        recovery_mode = False
         sys.stderr.write('recovery_mode: continue from ' + step_output_file + '\n')
-	recovery_mode = False
-
-    if 'auto' == model_name:
-	if np.random.randint(0, 120) == 0:
-            models_choice = np.random.randint(0,len(models_nice))
-        end = models_nice[models_choice]
-    else:
-        end = model_name
 
     frame = deepdream(net, frame, end=end, objective=objective)
     PIL.Image.fromarray(np.uint8(frame)).save(step_output_file)
