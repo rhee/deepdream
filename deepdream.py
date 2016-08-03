@@ -192,7 +192,7 @@ for i in xrange(int(iterations)):
     if 'auto' == model_name:
         if np.random.randint(0, 120) == 0:
             models_choice = np.random.randint(0,len(models_nice))
-            end = models_nice[models_choice]
+        end = models_nice[models_choice]
     else:
         end = model_name
 
@@ -213,6 +213,7 @@ for i in xrange(int(iterations)):
         sys.stderr.write('recovery_mode: continue from ' + step_output_file + '\n')
 
     frame = deepdream(net, frame, end=end, objective=objective)
+
     PIL.Image.fromarray(np.uint8(frame)).save(step_output_file)
     frame_i += 1
 
