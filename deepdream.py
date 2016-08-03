@@ -3,7 +3,7 @@
 
 import sys, os
 import argparse
-import nperf
+from nperf.nperf import nperf
 
 parser = argparse.ArgumentParser(description='deepdream demo')
 parser.add_argument('--output', type=str, default='output', help='Output directory')
