@@ -164,11 +164,11 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
 
         for i in xrange(iter_n):
             make_step(net, end=end, clip=clip, **step_params)
+            check1('make_step', print_out)
 
         def print_out(count, tlap):
             print 'snapshot:', octave, i, end
 
-        check1('octave', print_out)
 
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
