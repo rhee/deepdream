@@ -222,7 +222,7 @@ for i in xrange(int(iterations)):
 
     if 'auto' == model_name:
         if np.random.randint(0, 120) == 0:
-                models_choice = np.random.randint(0,len(models_nice))
+            models_choice = np.random.randint(0,len(models_nice))
             end = models_nice[models_choice]
         else:
             end = model_name
