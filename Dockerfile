@@ -83,6 +83,7 @@ RUN apt-get -y -q clean
 # install ffmpeg static rather than libav-tools
 ADD http://johnvansickle.com/ffmpeg/builds/ffmpeg-git-64bit-static.tar.xz /tmp
 RUN tar xJ -v -f /tmp/ffmpeg-git-64bit-static.tar.xz -C /opt && rm -fv /tmp/ffmpeg-git-64bit-static.tar.xz && ln -s /opt/ffmpeg-git-20160731-64bit-static/ffmpeg /usr/local/bin
+ENV PATH=/opt/ffmpeg-git-20160801-64bit-static/bin:$PATH
 
 # install node-lts
 ADD https://nodejs.org/dist/v4.4.7/node-v4.4.7-linux-x64.tar.xz /tmp
