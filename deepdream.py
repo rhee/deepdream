@@ -177,10 +177,10 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
 
             #print(octave, i, end #, vis.shape)
 
-	    def print_out(count, tlap):
-		print 'snapshot:', octave, i, end
+    def print_out(count, tlap):
+        print 'snapshot:', octave, i, end
 
-	    check('deepdream', print_out)
+        check('deepdream', print_out)
 
         #print(octave, '*', end) #, vis.shape
 
@@ -217,15 +217,15 @@ for i in xrange(int(iterations)):
         last_output_file = "%s/%04d.jpg"%(output_dir, frame_i - 1)
         frame = np.float32(PIL.Image.open(last_output_file))
         frame = nd.affine_transform(frame, [1-s,1-s,1], [h*s/2,w*s/2,0], order=1)
+        recovery_mode = False
         sys.stderr.write('recovery_mode: continue from ' + step_output_file + '\n')
-	recovery_mode = False
 
     if 'auto' == model_name:
-	if np.random.randint(0, 120) == 0:
-            models_choice = np.random.randint(0,len(models_nice))
-        end = models_nice[models_choice]
-    else:
-        end = model_name
+        if np.random.randint(0, 120) == 0:
+                models_choice = np.random.randint(0,len(models_nice))
+            end = models_nice[models_choice]
+        else:
+            end = model_name
 
     frame = deepdream(net, frame, end=end, objective=objective)
     PIL.Image.fromarray(np.uint8(frame)).save(step_output_file)
