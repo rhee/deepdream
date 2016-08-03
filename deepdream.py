@@ -26,13 +26,14 @@ import time
 import caffe
 
 
-# # try enable GPU
-# try:
-#     GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
-#     caffe.set_mode_gpu()
-#     caffe.set_device(GPU_ID)
-# except:
-#     pass
+if os.getenv('CUDA_ENABLED'):
+    # try enable GPU
+    try:
+        GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
+        caffe.set_mode_gpu()
+        caffe.set_device(GPU_ID)
+    except:
+        pass
 
 
 check = nperf.nperf(interval = 60.0)
