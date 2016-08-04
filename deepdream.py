@@ -9,9 +9,9 @@ parser = argparse.ArgumentParser(description='deepdream demo')
 parser.add_argument('--output', type=str, default='output', help='Output directory')
 parser.add_argument('--model', type=str, default='auto', help='Model network name')
 parser.add_argument('--guide', type=str, default='', help='Guide image')
-parser.add_argument('input_file', default='input.png')
-parser.add_argument('iterations', default=50)
-parser.add_argument('scale', default=0.05)
+parser.add_argument('input_file', type=str, default='input.png')
+parser.add_argument('iterations', type=int, default=50)
+parser.add_argument('scale', type=float, default=0.05)
 
 args = parser.parse_args()
 
@@ -36,9 +36,6 @@ if os.getenv('CUDA_ENABLED'):
         pass
 
 
-check1 = nperf.nperf(interval = 60.0)
-check2 = nperf.nperf(interval = 60.0)
-
 ###
 
 caffe_home = os.getenv('CAFFE_HOME')
@@ -46,10 +43,25 @@ model_path = caffe_home + '/models/bvlc_googlenet/' # substitute your path here
 net_fn   = model_path + 'deploy.prototxt'
 param_fn = model_path + 'bvlc_googlenet.caffemodel'
 
+# repeat 3x, 5x three times each, to make balance with 4x
 models_nice = [
+    'inception_3a/output',
+    'inception_3b/output',
+    'inception_3a/output',
+    'inception_3b/output',
+    'inception_3a/output',
+    'inception_3b/output',
+    'inception_4a/output',
+    'inception_4b/output',
     'inception_4c/output',
     'inception_4d/output',
-    'inception_5a/output'
+    'inception_4e/output',
+    'inception_5a/output',
+    'inception_5b/output',
+    'inception_5a/output',
+    'inception_5b/output',
+    'inception_5a/output',
+    'inception_5b/output'
 ]
 
 models_choice = np.random.randint(0,len(models_nice))
@@ -63,9 +75,17 @@ input_file = args.input_file
 iterations = args.iterations
 scale = args.scale
 
+
+if 'auto' == model_name and guide:
+    sys.stderr.write('[WARN] guide %s disabled without end layer specified')
+    guide = None
+
 ###
 
 # make /data/output
+
+check1 = nperf.nperf(interval = 60.0)
+check2 = nperf.nperf(interval = 60.0, maxcount = iterations)
 
 try: os.makedirs(output_dir)
 except: pass
@@ -97,6 +117,7 @@ if 'auto' != model_name:
         sys.exit(-1)
         
 if 'auto' != model_name and guide:
+    
     guide_image = np.float32(PIL.Image.open(guide))
     h, w = guide_image.shape[:2]
     src, dst = net.blobs['data'], net.blobs[model_name]
@@ -115,11 +136,14 @@ if 'auto' != model_name and guide:
         y = y.reshape(ch,-1)
         A = x.T.dot(y) # compute the matrix of dot-products with guide features
         dst.diff[0].reshape(ch,-1)[:] = y[:,A.argmax(1)] # select ones that match best
+
     objective = objective_guide
-    
+
 else:
+
     def objective_L2(dst):
-        dst.diff[:] = dst.data 
+        dst.diff[:] = dst.data
+
     objective = objective_L2
 
 # a couple of utility functions for converting to and from Caffe's input image layout
