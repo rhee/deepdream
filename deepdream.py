@@ -1,7 +1,7 @@
 # Source: Google Deepdream code @ https://github.com/google/deepdream/
 # Slightly modified in order to be run inside the container as a script instead of an IPython Notebook
 
-import sys, os
+import sys, os, traceback
 import argparse
 import nperf
 
@@ -26,14 +26,18 @@ import time
 import caffe
 
 
+cuda_enabled = False
+
 if os.getenv('CUDA_ENABLED'):
+    sys.stderr.write('CUDA_ENABLED' + '\n')
     # try enable GPU
     try:
         GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
         caffe.set_mode_gpu()
         caffe.set_device(GPU_ID)
+        cuda_enabled = True
     except:
-        pass
+        traceback.print_exc()
 
 
 ###
@@ -82,10 +86,19 @@ if 'auto' == model_name and guide:
 
 ###
 
+
 # make /data/output
 
 check1 = nperf.nperf(interval = 60.0)
 check2 = nperf.nperf(interval = 60.0, maxcount = iterations)
+
+if cuda_enabled:
+    perf_tag1 = '[cuda] make_step'
+    perf_tag2 = '[cuda] deepdream'
+else:
+    perf_tag1 = '[cpu] make_step'
+    perf_tag2 = '[cpu] deepdream'
+
 
 try: os.makedirs(output_dir)
 except: pass
@@ -186,24 +199,25 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
         src.reshape(1,3,h,w) # resize the network's input image size
         src.data[0] = octave_base+detail
 
-        def print_out(count, tlap):
-            print 'snapshot:', octave, i, end
-
         for i in xrange(iter_n):
             make_step(net, end=end, clip=clip, **step_params)
-            check1('make_step', print_out)
+            
+            def print_out(count, tlap):
+                print 'snapshot:', octave, i, end
+            
+            check1(perf_tag1, print_out)
 
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
 
-    check2('deepdream', print_out)
+    check2(perf_tag2)
 
     # returning the resulting image
     return deprocess(net, src.data[0])
 
+frame = img
 frame_i = 1
 
-frame = img
 PIL.Image.fromarray(np.uint8(frame)).save("%s/%04d.jpg"%(output_dir, frame_i))
 frame_i += 1
 
@@ -238,7 +252,7 @@ for i in xrange(int(iterations)):
         recovery_mode = False
         sys.stderr.write('recovery_mode: continue from ' + step_output_file + '\n')
 
-    frame = deepdream(net, frame, end=end, objective=objective, iter_n=5)
+    frame = deepdream(net, frame, end=end, objective=objective)
 
     PIL.Image.fromarray(np.uint8(frame)).save(step_output_file)
     frame_i += 1
