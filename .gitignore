@@ -1,6 +1,7 @@
 intel_mkl.lic
 l_mkl_*.tgz
-output
+input*.output
 input*.jpg
 input*.mp4
 input*.prototxt
+env.source
