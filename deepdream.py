@@ -36,7 +36,8 @@ if os.getenv('CUDA_ENABLED'):
         pass
 
 
-check = nperf.nperf(interval = 60.0)
+check1 = nperf.nperf(interval = 60.0)
+check2 = nperf.nperf(interval = 60.0)
 
 ###
 
@@ -161,16 +162,17 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
         src.reshape(1,3,h,w) # resize the network's input image size
         src.data[0] = octave_base+detail
 
-        for i in xrange(iter_n):
-            make_step(net, end=end, clip=clip, **step_params)
-
         def print_out(count, tlap):
             print 'snapshot:', octave, i, end
 
-        check('deepdream', print_out)
+        for i in xrange(iter_n):
+            make_step(net, end=end, clip=clip, **step_params)
+            check1('make_step', print_out)
 
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
+
+    check2('deepdream', print_out)
 
     # returning the resulting image
     return deprocess(net, src.data[0])
@@ -212,7 +214,7 @@ for i in xrange(int(iterations)):
         recovery_mode = False
         sys.stderr.write('recovery_mode: continue from ' + step_output_file + '\n')
 
-    frame = deepdream(net, frame, end=end, objective=objective)
+    frame = deepdream(net, frame, end=end, objective=objective, iter_n=5)
 
     PIL.Image.fromarray(np.uint8(frame)).save(step_output_file)
     frame_i += 1
