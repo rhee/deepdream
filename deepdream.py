@@ -43,7 +43,12 @@ model_path = caffe_home + '/models/bvlc_googlenet/' # substitute your path here
 net_fn   = model_path + 'deploy.prototxt'
 param_fn = model_path + 'bvlc_googlenet.caffemodel'
 
+# repeat 3x, 5x three times each, to make balance with 4x
 models_nice = [
+    'inception_3a/output',
+    'inception_3b/output',
+    'inception_3a/output',
+    'inception_3b/output',
     'inception_3a/output',
     'inception_3b/output',
     'inception_4a/output',
@@ -51,6 +56,10 @@ models_nice = [
     'inception_4c/output',
     'inception_4d/output',
     'inception_4e/output',
+    'inception_5a/output',
+    'inception_5b/output',
+    'inception_5a/output',
+    'inception_5b/output',
     'inception_5a/output',
     'inception_5b/output'
 ]
@@ -127,12 +136,14 @@ if 'auto' != model_name and guide:
         y = y.reshape(ch,-1)
         A = x.T.dot(y) # compute the matrix of dot-products with guide features
         dst.diff[0].reshape(ch,-1)[:] = y[:,A.argmax(1)] # select ones that match best
+
     objective = objective_guide
-    
+
 else:
-    
+
     def objective_L2(dst):
-        dst.diff[:] = dst.data 
+        dst.diff[:] = dst.data
+
     objective = objective_L2
 
 # a couple of utility functions for converting to and from Caffe's input image layout
