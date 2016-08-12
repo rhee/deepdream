@@ -1,6 +1,7 @@
 # Source: Google Deepdream code @ https://github.com/google/deepdream/
 # Slightly modified in order to be run inside the container as a script instead of an IPython Notebook
 
+from __future__ import print_function
 import sys, os
 
 caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
@@ -41,11 +42,6 @@ if use_cuda:
         traceback.print_exc()
 
 ###
-
-def make_step_output_fn(output_dir):
-    def step_output_fn(frame_i):
-        return "%s/%04d.jpg" % (output_dir, frame_i)
-    return step_output_fn
 
 # default objective
 def objective_L2(dst): dst.diff[:] = dst.data
@@ -120,24 +116,12 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
     return deprocess(net, src.data[0])
 
 
-if '__main__' == __name__:
-
-    parser = argparse.ArgumentParser(description='deepdream demo')
-    parser.add_argument('--model', type=str, default='inception_4c/output', help='Model network name')
-    parser.add_argument('--guide', type=str, default='', help='Guide image')
-    parser.add_argument('--scale', type=float, default=0.05)
-    parser.add_argument('input_file', type=str, default='input.jpg')
-    parser.add_argument('output_dir', type=str, default='output')
-    parser.add_argument('iterations', type=int, default=1440)
-
-    args = parser.parse_args()
+def main(args):
 
     ###
 
-    guide = args.guide
     model_name = args.model
-    scale = args.scale
-    input_file = args.input_file
+    input_dir = args.input_dir
     output_dir = args.output_dir
     iterations = args.iterations
 
@@ -150,13 +134,6 @@ if '__main__' == __name__:
 
     try: os.makedirs(output_dir)
     except: pass
-
-    print("Processing file: " + input_file)
-    print("Iterations = %s" % iterations)
-    print("Scale = %s" % scale)
-    print("Model = %s" % model_name)
-
-    step_output_fn = make_step_output_fn(output_dir)
 
     # Patching model to be able to compute gradients.
     # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
@@ -184,57 +161,65 @@ if '__main__' == __name__:
         sys.stderr.write('Valid models are:' + repr(net.blobs.keys()) + '\n')
         sys.exit(1)
 
-    if guide:
-        guide_image = np.float32(PIL.Image.open(guide))
+    ###
+
+    files = os.listdir(input_dir)
+    files.sort()
+
+    # scan existing output images
+    i = 0
+    while i < len(files):
+        f = files[i]
+        output_file = os.path.join(output_dir, f)
+        if not os.path.exists(output_file):
+            break
+        i += 1
+
+    if i > 0:
+        # make guide function from last image
+        guide_image = np.float32(PIL.Image.open(os.path.join(input_dir,files[i-1])))
         objective = make_objective_guided(net, model_name, guide_image)
     else:
+        # make initial L2 guide function
         objective = objective_L2
 
-    ###
+    # start next images
+    check2 = nperf.nperf(interval = 30.0, maxcount = (len(files) - i) * iterations)
 
-    check2 = nperf.nperf(interval = 30.0, maxcount = iterations)
+    while i < len(files):
+        f = files[i]
+        input_file = os.path.join(input_dir, f)
+        output_file = os.path.join(output_dir, f)
 
-    ###
+        print("Processing:", f, model_name, iterations)
 
-    if os.path.exists(step_output_fn(1)):
-        sys.stderr.write('Found previous output. Assume recovery mode.' + '\n')
-        # find end of previous outputs
-        for i in xrange(1, iterations):
-            next_i = i + 1
-            if not os.path.exists(step_output_fn(next_i)):
-                frame = np.float32(PIL.Image.open(step_output_fn(i)))
-                h, w = frame.shape[:2]
-                frame = nd.affine_transform(frame, [1-scale,1-scale,1], [h*scale/2,w*scale/2,0], order=1)
-                sys.stderr.write('recovery_mode: continue from %d' % (next_i, ) + '\n')
-                break
-            check2(perf_tag2)
-        if next_i >= iterations:
-            sys.stderr.write('recovery_mode: found full output set completed')
-            os.exit(0)
-    else:
-        next_i = 1 + 1
         frame = np.float32(PIL.Image.open(input_file))
-        PIL.Image.fromarray(np.uint8(frame)).save(step_output_fn(1))
-        h, w = frame.shape[:2]
-        check2(perf_tag2)
 
-    ###
+        for short_i in xrange(iterations):
+            frame = deepdream(net, frame, objective=objective)
+            check2(perf_tag2)
 
-    for frame_i in xrange(next_i, iterations + 1):
+        # use this frame as guide image for next iteration
+        objective = make_objective_guided(net, model_name, frame)
 
-        frame = deepdream(net, frame, objective=objective)
-        PIL.Image.fromarray(np.uint8(frame)).save(step_output_fn(frame_i))
+        PIL.Image.fromarray(np.uint8(frame)).save(output_file)
 
-        # affine transform (zoom-in) before feed as next step input
-        frame = nd.affine_transform(
-            frame,
-            [1 - scale, 1 - scale, 1],
-            [h * scale / 2, w * scale / 2, 0],
-            order=1)
-
-        check2(perf_tag2)
+        i += 1
 
     #print "All done! Check the " + output_dir + " folder for results"
+
+if '__main__' == __name__:
+
+    parser = argparse.ArgumentParser(description='deepdream demo')
+    parser.add_argument('--model', type=str, default='inception_4c/output', help='Model network name')
+    parser.add_argument('--guide', type=str, default='', help='Guide image')
+    parser.add_argument('--iterations', type=int, default=2)
+    parser.add_argument('input_dir', type=str)
+    parser.add_argument('output_dir', type=str)
+
+    args = parser.parse_args()
+
+    main(args)
 
 # Emacs:
 # Local Variables:

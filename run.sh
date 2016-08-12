@@ -1,7 +1,6 @@
 :
 
-iter=2400 # 100sec = 1:40sec
-scale=0.05
+iter=1440 # 60sec
 
 set -e
 set -x
@@ -10,8 +9,8 @@ for input in "$@"; do
 
   b=$(basename $input .jpg)
 
-  python -u deepdream.py --output=$b.output $input $iter $scale $model $guide
+  python -u deepdream.py $input $b.output $iter
 
-  ./cleanup.sh "$input"
+  ./cleanup.sh "$b.output"
 
 done

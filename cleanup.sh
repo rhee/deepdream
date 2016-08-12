@@ -1,11 +1,9 @@
 #!/bin/sh
 
-for input in "$@"; do
+for dir in "$@"; do
 
-  b=$(basename $input .jpg)
-
-  cp $b.output/prototxt $b.prototxt
-  ./make-movie.sh "$b.output" "$b.output.mp4" &&
-    rm -fr $b.output
+  cp $dir/prototxt $dir.prototxt
+  ./make-movie.sh "$dir/*.jpg" "$dir.mp4" &&
+    rm -fr "$dir"
 
 done
