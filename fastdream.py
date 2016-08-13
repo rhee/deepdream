@@ -28,8 +28,6 @@ if caffe_python_path not in sys.path:
 
 import caffe
 
-###
-
 if use_cuda:
     sys.stderr.write('USE_CUDA' + '\n')
     # try enable GPU
@@ -43,6 +41,11 @@ if use_cuda:
 
 ###
 
+def make_step_output_fn(output_dir):
+    def step_output_fn(frame_i):
+        return "%s/%04d.jpg" % (output_dir, frame_i)
+    return step_output_fn
+
 # default objective
 def objective_L2(dst): dst.diff[:] = dst.data
 
@@ -54,8 +57,6 @@ def make_objective_guided(net, layer, guide_image):
     src.data[0] = preprocess(net, guide_image)
     net.forward(end=layer)
     guide_features = dst.data[0].copy()
-    
-    print('make_objective_guided:', layer, guide_features.shape)
 
     def objective_guided(dst):
         x = dst.data[0].copy()
@@ -117,6 +118,17 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
     # returning the resulting image
     return deprocess(net, src.data[0])
 
+import hashlib
+
+def md5(fname):
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+import tempfile
+
 def make_net():
     # Patching model to be able to compute gradients.
     # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
@@ -125,13 +137,14 @@ def make_net():
     net_fn   = model_path + 'deploy.prototxt'
     param_fn = model_path + 'bvlc_googlenet.caffemodel'
 
+    #!(cd $CAFFE_ROOT ; scripts/download_model_binary.py models/bvlc_googlenet)
     os.system('cd $CAFFE_ROOT; scripts/download_model_binary.py models/bvlc_googlenet')
 
     model = caffe.io.caffe_pb2.NetParameter()
     text_format.Merge(open(net_fn).read(), model)
     model.force_backward = True
 
-    prototxt = 'merged.prototxt'
+    prototxt = tempfile.mktemp()
     open(prototxt, 'w').write(str(model))
 
     net = caffe.Classifier(prototxt, param_fn,
@@ -142,13 +155,12 @@ def make_net():
 
 
 def main(args):
-
-    ###
-
+    guide = args.guide
     layer = args.layer
-    input_dir = args.input_dir
-    output_dir = args.output_dir
+    scale = args.scale
     iterations = args.iterations
+    input_file = args.input_file
+    output_dir = args.output_dir
 
     # make /data/output
 
@@ -160,71 +172,77 @@ def main(args):
     try: os.makedirs(output_dir)
     except: pass
 
+    print("Processing file: " + input_file)
+    print("Iterations = %s" % iterations)
+    print("Scale = %s" % scale)
+    print("Model = %s" % layer)
+
+    step_output_fn = make_step_output_fn(output_dir)
+
     net, model = make_net()
- 
+
+    open('%s.prototxt' % (os.path.basename(input_file),), 'w').write(str(model))
+
     # verify model name provided
     if not layer in net.blobs.keys():
         sys.stderr.write('Invalid model name: %s' % (layer,) + '\n')
         sys.stderr.write('Valid models are:' + repr(net.blobs.keys()) + '\n')
         sys.exit(1)
 
+    if guide:
+        guide_image = np.float32(PIL.Image.open(guide))
+        objective = make_objective_guided(net, layer, guide_image)
+    else:
+        objective = objective_L2
+
     ###
 
-    files = [v for v in os.listdir(input_dir) if v.endswith('.jpg')]
-    files.sort()
-
-    # scan existing output images
-    i = 0
-    while i < len(files):
-        f = files[i]
-        output_file = os.path.join(output_dir, f)
-        if not os.path.exists(output_file):
+    frame = None
+    i = 1
+    while i < iterations + 1:
+        if not os.path.exists(step_output_fn(i)):
             break
         i += 1
+    
+    if i > 1:
+        frame = np.float32(PIL.Image.open(step_output_fn(i-1)))
+        h, w = frame.shape[:2]
+        frame = nd.affine_transform(frame, [1-scale,1-scale,1], [h*scale/2,w*scale/2,0], order=1)
+    else:
+        frame = np.float32(PIL.Image.open(input_file))
+        h, w = frame.shape[:2]
+        PIL.Image.fromarray(np.uint8(frame)).save(step_output_fn(1))
+
+    # start next images
+    check2 = nperf.nperf(interval = 30.0, maxcount = (iterations - i + 1))
 
     print('####################################')
     print('#   loop starts from', i)
     print('####################################')
 
-    if i > 0:
-        # make guide function from last image
-        guide_image = np.float32(PIL.Image.open(os.path.join(input_dir,files[i-1])))
-        objective = make_objective_guided(net, layer, guide_image)
-    else:
-        # make initial L2 guide function
-        objective = objective_L2
-
-    # start next images
-    check2 = nperf.nperf(interval = 30.0, maxcount = (len(files) - i) * iterations)
-
-    while i < len(files):
-        f = files[i]
-        input_file = os.path.join(input_dir, f)
-        output_file = os.path.join(output_dir, f)
-
-        frame = np.float32(PIL.Image.open(input_file))
-
-        print("processing:", f, frame.shape, layer, iterations)
-
-        for short_i in xrange(iterations):
-            frame = deepdream(net, frame, end=layer, objective=objective)
-            check2(perf_tag2)
-
-        # use this frame as guide image for next iteration
-        objective = make_objective_guided(net, layer, frame)
-
-        PIL.Image.fromarray(np.uint8(frame)).save(output_file)
-
+    while i <= iterations:
+        frame = deepdream(net, frame, end=layer, objective=objective)
+        PIL.Image.fromarray(np.uint8(frame)).save(step_output_fn(i))
+        # affine transform (zoom-in) before feed as next step input
+        frame = nd.affine_transform(
+            frame,
+            [1 - scale, 1 - scale, 1],
+            [h * scale / 2, w * scale / 2, 0],
+            order=1)
+        check2(perf_tag2)
         i += 1
+
+    #print "All done! Check the " + output_dir + " folder for results"
 
 if '__main__' == __name__:
 
     parser = argparse.ArgumentParser(description='deepdream demo')
-    parser.add_argument('--layer', type=str, default='inception_4c/output', help='layer to reflect')
-    parser.add_argument('--guide', type=str, default='', help='Guide image')
-    parser.add_argument('--iterations', type=int, default=2)
-    parser.add_argument('input_dir', type=str)
-    parser.add_argument('output_dir', type=str)
+    parser.add_argument('--layer', type=str, default='inception_4c/output')
+    parser.add_argument('--guide', type=str, default=None)
+    parser.add_argument('--scale', type=float, default=0.05)
+    parser.add_argument('--iterations', type=int, default=1440)
+    parser.add_argument('input_file', type=str, default='input.jpg')
+    parser.add_argument('output_dir', type=str, default='output')
 
     args = parser.parse_args()
 

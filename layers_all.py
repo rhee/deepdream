@@ -28,8 +28,6 @@ if caffe_python_path not in sys.path:
 
 import caffe
 
-###
-
 if use_cuda:
     sys.stderr.write('USE_CUDA' + '\n')
     # try enable GPU
