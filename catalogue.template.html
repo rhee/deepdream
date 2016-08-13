@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+.catalogue {
+    width: 95%;
+    height: auto;
+}
+
+.catalogue-entry {
+    display: inline-block;
+    list-style: none inside;
+}
+
+.catalogue-entry img {
+    width: 320px;
+}
+
+.catalogue-entry figcaption {
+    font-size: 0.25rem;
+}
+
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function(ev) {
+  var files = decodeURIComponent(location.hash.substr(1)).split(',');
+  var catalogue = document.querySelector('#catalogue');
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    var shortname = file.split('/')[1];
+    var li = document.createElement('li');
+    li.className = 'catalogue-entry';
+    li.innerHTML = '<figure><img src="' + file + '"></img><figcaption>' + shortname + '</figcaption></figure>';
+    catalogue.appendChild(li);
+  }
+});
+</script>
+</head>
+<body>
+<table border="0">
+    <tr>
+        <td>
+<ul id='catalogue' class='catalogue'>
+</ul>
+        </td>
+    </tr>
+    </table>
+</body>
+</html>

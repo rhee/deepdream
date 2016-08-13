@@ -8,7 +8,7 @@ pattern="$1"
 output_mp4="$2"
 frame_rate="$3"
 
-test -z "$frame_rate" && frame_rate=24
+test -z "$frame_rate" && frame_rate=2
 
 ###
 

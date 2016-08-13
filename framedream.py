@@ -46,14 +46,16 @@ if use_cuda:
 # default objective
 def objective_L2(dst): dst.diff[:] = dst.data
 
-def make_objective_guided(net, model_name, guide_image):
+def make_objective_guided(net, layer, guide_image):
 
     h, w = guide_image.shape[:2]
-    src, dst = net.blobs['data'], net.blobs[model_name]
+    src, dst = net.blobs['data'], net.blobs[layer]
     src.reshape(1,3,h,w)
     src.data[0] = preprocess(net, guide_image)
-    net.forward(end=model_name)
+    net.forward(end=layer)
     guide_features = dst.data[0].copy()
+    
+    print('make_objective_guided:', layer, guide_features.shape)
 
     def objective_guided(dst):
         x = dst.data[0].copy()
@@ -115,12 +117,35 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
     # returning the resulting image
     return deprocess(net, src.data[0])
 
+def make_net():
+    # Patching model to be able to compute gradients.
+    # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
+
+    model_path = caffe_root + 'models/bvlc_googlenet/' # substitute your path here
+    net_fn   = model_path + 'deploy.prototxt'
+    param_fn = model_path + 'bvlc_googlenet.caffemodel'
+
+    os.system('cd $CAFFE_ROOT; scripts/download_model_binary.py models/bvlc_googlenet')
+
+    model = caffe.io.caffe_pb2.NetParameter()
+    text_format.Merge(open(net_fn).read(), model)
+    model.force_backward = True
+
+    prototxt = 'merged.prototxt'
+    open(prototxt, 'w').write(str(model))
+
+    net = caffe.Classifier(prototxt, param_fn,
+                           mean = np.float32([104.0, 116.0, 122.0]), # ImageNet mean, training set dependent
+                           channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
+
+    return net, model
+
 
 def main(args):
 
     ###
 
-    model_name = args.model
+    layer = args.layer
     input_dir = args.input_dir
     output_dir = args.output_dir
     iterations = args.iterations
@@ -135,35 +160,17 @@ def main(args):
     try: os.makedirs(output_dir)
     except: pass
 
-    # Patching model to be able to compute gradients.
-    # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
-
-    model_path = caffe_root + 'models/bvlc_googlenet/' # substitute your path here
-    net_fn   = model_path + 'deploy.prototxt'
-    param_fn = model_path + 'bvlc_googlenet.caffemodel'
-
-    #!(cd $CAFFE_ROOT ; scripts/download_model_binary.py models/bvlc_googlenet)
-    os.system('cd $CAFFE_ROOT; scripts/download_model_binary.py models/bvlc_googlenet')
-
-    model = caffe.io.caffe_pb2.NetParameter()
-    text_format.Merge(open(net_fn).read(), model)
-    model.force_backward = True
-
-    open('%s/prototxt' % (output_dir,), 'w').write(str(model))
-
-    net = caffe.Classifier('%s/prototxt' % (output_dir,), param_fn,
-                           mean = np.float32([104.0, 116.0, 122.0]), # ImageNet mean, training set dependent
-                           channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
-
+    net, model = make_net()
+ 
     # verify model name provided
-    if not model_name in net.blobs.keys():
-        sys.stderr.write('Invalid model name: %s' % (model_name,) + '\n')
+    if not layer in net.blobs.keys():
+        sys.stderr.write('Invalid model name: %s' % (layer,) + '\n')
         sys.stderr.write('Valid models are:' + repr(net.blobs.keys()) + '\n')
         sys.exit(1)
 
     ###
 
-    files = os.listdir(input_dir)
+    files = [v for v in os.listdir(input_dir) if v.endswith('.jpg')]
     files.sort()
 
     # scan existing output images
@@ -175,10 +182,14 @@ def main(args):
             break
         i += 1
 
+    print('####################################')
+    print('#   loop starts from', i)
+    print('####################################')
+
     if i > 0:
         # make guide function from last image
         guide_image = np.float32(PIL.Image.open(os.path.join(input_dir,files[i-1])))
-        objective = make_objective_guided(net, model_name, guide_image)
+        objective = make_objective_guided(net, layer, guide_image)
     else:
         # make initial L2 guide function
         objective = objective_L2
@@ -191,27 +202,26 @@ def main(args):
         input_file = os.path.join(input_dir, f)
         output_file = os.path.join(output_dir, f)
 
-        print("Processing:", f, model_name, iterations)
-
         frame = np.float32(PIL.Image.open(input_file))
 
+        print("processing:", f, layer, iterations)
+        print("shape:", frame.shape)
+
         for short_i in xrange(iterations):
-            frame = deepdream(net, frame, objective=objective)
+            frame = deepdream(net, frame, end=layer, objective=objective)
             check2(perf_tag2)
 
         # use this frame as guide image for next iteration
-        objective = make_objective_guided(net, model_name, frame)
+        objective = make_objective_guided(net, layer, frame)
 
         PIL.Image.fromarray(np.uint8(frame)).save(output_file)
 
         i += 1
 
-    #print "All done! Check the " + output_dir + " folder for results"
-
 if '__main__' == __name__:
 
     parser = argparse.ArgumentParser(description='deepdream demo')
-    parser.add_argument('--model', type=str, default='inception_4c/output', help='Model network name')
+    parser.add_argument('--layer', type=str, default='inception_4c/output', help='layer to reflect')
     parser.add_argument('--guide', type=str, default='', help='Guide image')
     parser.add_argument('--iterations', type=int, default=2)
     parser.add_argument('input_dir', type=str)

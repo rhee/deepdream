@@ -138,11 +138,11 @@ def make_net():
                            mean = np.float32([104.0, 116.0, 122.0]), # ImageNet mean, training set dependent
                            channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
 
-    return net
+    return net, model
 
 ####################
 
-net = make_net()
+net, _ = make_net()
 
 input_file = 'input01.jpg'
 output_dir = 'layer-by-layer'
