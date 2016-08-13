@@ -5,3 +5,6 @@ input*.jpg
 input*.mp4
 input*.prototxt
 env.source
+.DS_Store
+.ipynb_checkpoints
+*.pyc
