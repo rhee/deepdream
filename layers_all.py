@@ -151,7 +151,7 @@ except: pass
 
 img = np.float32(PIL.Image.open(input_file))
 
-output_file = 'orig.jpg'
+output_file = '000_orig.jpg'
 PIL.Image.fromarray(np.uint8(img)).save(os.path.join(output_dir,output_file))
 
 i = 1

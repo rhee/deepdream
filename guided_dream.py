@@ -204,8 +204,8 @@ def main(args):
 
     if i > 0:
         frame = np.float32(PIL.Image.open(os.path.join(output_dir, files[i-1])))
-        # h, w = frame.shape[:2]
-        # frame = nd.affine_transform(frame, [1-scale,1-scale,1], [h*scale/2,w*scale/2,0], order=1)
+        h, w = frame.shape[:2]
+        frame = nd.affine_transform(frame, [1-scale,1-scale,1], [h*scale/2,w*scale/2,0], order=1)
     else:
         frame = np.float32(PIL.Image.open(input_file))
 
@@ -229,13 +229,9 @@ def main(args):
 
         PIL.Image.fromarray(np.uint8(frame)).save(output_file)
 
-        # # affine transform (zoom-in) before feed as next step input
-        # h, w = frame.shape[:2]
-        # frame = nd.affine_transform(
-        #     frame,
-        #     [1 - scale, 1 - scale, 1],
-        #     [h * scale / 2, w * scale / 2, 0],
-        #     order=1)
+        # affine transform (zoom-in) before feed as next step input
+        h, w = frame.shape[:2]
+        frame = nd.affine_transform(frame, [1-scale,1-scale,1], [h*scale/2,w*scale/2,0], order=1)
 
 if '__main__' == __name__:
 
@@ -243,7 +239,7 @@ if '__main__' == __name__:
     parser.add_argument('--layer', type=str, default='inception_4c/output', help='layer to reflect')
     parser.add_argument('--guide', type=str, default='', help='Guide image')
     parser.add_argument('--amplify', type=int, default=1)
-    parser.add_argument('--scale', type=float, default=0.05)
+    parser.add_argument('--scale', type=float, default=0.0039) # 2 ^ (1/12/r)
     parser.add_argument('input_file', type=str)
     parser.add_argument('guide_dir', type=str)
     parser.add_argument('output_dir', type=str)
