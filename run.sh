@@ -11,6 +11,4 @@ for input in "$@"; do
 
   python -u deepdream.py $input $b.output $iter
 
-  ./cleanup.sh "$b.output"
-
 done

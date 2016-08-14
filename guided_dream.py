@@ -28,6 +28,8 @@ if caffe_python_path not in sys.path:
 
 import caffe
 
+###
+
 if use_cuda:
     sys.stderr.write('USE_CUDA' + '\n')
     # try enable GPU
@@ -44,14 +46,16 @@ if use_cuda:
 # default objective
 def objective_L2(dst): dst.diff[:] = dst.data
 
-def make_objective_guided(net, model_name, guide_image):
+def make_objective_guided(net, layer, guide_image):
 
     h, w = guide_image.shape[:2]
-    src, dst = net.blobs['data'], net.blobs[model_name]
+    src, dst = net.blobs['data'], net.blobs[layer]
     src.reshape(1,3,h,w)
     src.data[0] = preprocess(net, guide_image)
-    net.forward(end=model_name)
+    net.forward(end=layer)
     guide_features = dst.data[0].copy()
+    
+    print('make_objective_guided:', layer, guide_features.shape)
 
     def objective_guided(dst):
         x = dst.data[0].copy()
@@ -113,6 +117,7 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
     # returning the resulting image
     return deprocess(net, src.data[0])
 
+import tempfile
 
 def make_net():
     # Patching model to be able to compute gradients.
@@ -122,61 +127,130 @@ def make_net():
     net_fn   = model_path + 'deploy.prototxt'
     param_fn = model_path + 'bvlc_googlenet.caffemodel'
 
-    #!(cd $CAFFE_ROOT ; scripts/download_model_binary.py models/bvlc_googlenet)
     os.system('cd $CAFFE_ROOT; scripts/download_model_binary.py models/bvlc_googlenet')
 
     model = caffe.io.caffe_pb2.NetParameter()
     text_format.Merge(open(net_fn).read(), model)
     model.force_backward = True
 
-    new_model_file = 'prototxt'
-    open(new_model_file, 'w').write(str(model))
+    prototxt = tempfile.mktemp()
+    open(prototxt, 'w').write(str(model))
 
-    net = caffe.Classifier(new_model_file, param_fn,
+    # # silence stderr while caffe loading
+    # print("silence caffe loading")
+    # _fd = os.dup(2)
+    # _nullfd = os.open(os.devnull, 0644, os.O_APPEND)
+    # os.dup2(_nullfd, 2)
+
+    net = caffe.Classifier(prototxt, param_fn,
                            mean = np.float32([104.0, 116.0, 122.0]), # ImageNet mean, training set dependent
                            channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
 
-    return net, model
+    # os.dup2(_fd, 2)
+    # print("unsilenced caffe loading")
 
-####################
+    layers = net.blobs.keys()
 
-net, _ = make_net()
+    return net, model, layers
 
-input_file = 'input01.jpg'
-output_dir = 'layers'
-amplify = 3
 
-try: os.makedirs(output_dir)
-except: pass
+def main(args):
 
-img = np.float32(PIL.Image.open(input_file))
+    ###
 
-output_file = 'orig.jpg'
-PIL.Image.fromarray(np.uint8(img)).save(os.path.join(output_dir,output_file))
+    layer = args.layer
+    input_file = args.input_file
+    guide_dir = args.guide_dir
+    output_dir = args.output_dir
+    amplify = args.amplify
+    scale = args.scale
 
-i = 1
-for layer in net.blobs.keys():
-    try:
-        frame = img.copy()
-        for amplify_i in xrange(amplify):
-            frame = deepdream(net, frame, end=layer, objective=objective_L2)
-        output_file = '%03d_%s.jpg' % (i,layer.replace('/','_'),)
-        PIL.Image.fromarray(np.uint8(frame)).save(os.path.join(output_dir,output_file))
-        print('wrote:',output_file,i)
+    # make /data/output
+
+    if use_cuda:
+        perf_tag2 = '[cuda] deepdream'
+    else:
+        perf_tag2 = '[cpu] deepdream'
+
+    net, model, layers = make_net()
+
+    # verify model name provided
+    if not layer in layers:
+        sys.stderr.write('Invalid model name: %s' % (layer,) + '\n')
+        sys.stderr.write('Valid models are:' + repr(net.blobs.keys()) + '\n')
+        sys.exit(1)
+
+    ###
+
+    print("output_dir:", output_dir)
+    try: os.makedirs(output_dir)
+    except: traceback.print_exc()
+
+    files = [v for v in os.listdir(guide_dir) if v.endswith('.jpg')]
+    files.sort()
+
+    # scan existing output images
+    i = 0
+    while i < len(files):
+        f = files[i]
+        output_file = os.path.join(output_dir, f)
+        if not os.path.exists(output_file):
+            break
         i += 1
-    except:
-        traceback.print_exc()
 
-# make catalogue.html
-files_list = ','.join([os.path.join(output_dir, v) for v in os.listdir(output_dir) if v.endswith('.jpg')])
+    print('####################################')
+    print('#   loop starts from', i)
+    print('####################################')
 
-from urllib import quote
-url = 'catalogue.template.html#' + quote(files_list)
-open('catalogue.html','w').write('''
-<iframe style="width:100%;border:0;overflow:hidden;" src="''' + url + '''"
-  onload="javascript:this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px'">
-</iframe>
-''')
+    if i > 0:
+        frame = np.float32(PIL.Image.open(os.path.join(output_dir, files[i-1])))
+        # h, w = frame.shape[:2]
+        # frame = nd.affine_transform(frame, [1-scale,1-scale,1], [h*scale/2,w*scale/2,0], order=1)
+    else:
+        frame = np.float32(PIL.Image.open(input_file))
+
+    # start next images
+    check2 = nperf.nperf(interval = 30.0, maxcount = (len(files) - i) * amplify)
+
+    for f in files[i:]:
+
+        guide_file = os.path.join(guide_dir, f)
+        output_file = os.path.join(output_dir, f)
+
+        # use this frame as guide image for next iteration
+        guide_frame = np.float32(PIL.Image.open(guide_file))
+        objective = make_objective_guided(net, layer, guide_frame)
+
+        print("processing:", f, frame.shape, layer, amplify)
+
+        for _ in xrange(amplify):
+            frame = deepdream(net, frame, end=layer, objective=objective)
+            check2(perf_tag2)
+
+        PIL.Image.fromarray(np.uint8(frame)).save(output_file)
+
+        # # affine transform (zoom-in) before feed as next step input
+        # h, w = frame.shape[:2]
+        # frame = nd.affine_transform(
+        #     frame,
+        #     [1 - scale, 1 - scale, 1],
+        #     [h * scale / 2, w * scale / 2, 0],
+        #     order=1)
+
+if '__main__' == __name__:
+
+    parser = argparse.ArgumentParser(description='deepdream demo')
+    parser.add_argument('--layer', type=str, default='inception_4c/output', help='layer to reflect')
+    parser.add_argument('--guide', type=str, default='', help='Guide image')
+    parser.add_argument('--amplify', type=int, default=1)
+    parser.add_argument('--scale', type=float, default=0.05)
+    parser.add_argument('input_file', type=str)
+    parser.add_argument('guide_dir', type=str)
+    parser.add_argument('output_dir', type=str)
+
+    args = parser.parse_args()
+
+    main(args)
 
 # Emacs:
 # Local Variables:
