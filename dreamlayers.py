@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys, os
 
 import argparse
-import traceback
+from traceback import print_exc
 
 import numpy as np
 import PIL.Image
@@ -78,7 +78,7 @@ if '__main__' == __name__:
         except KeyboardInterrupt:
             os.exit(1)
         except:
-            traceback.print_exc()
+            print_exc()
 
     make_catalogue(output_dir)
 

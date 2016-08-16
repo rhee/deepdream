@@ -4,15 +4,12 @@
 from __future__ import print_function
 import sys, os
 
-import traceback
+from traceback import print_exc
+from tempfile import mktemp
 
-from cStringIO import StringIO
 import numpy as np
 import scipy.ndimage as nd
-import PIL.Image
-
 from google.protobuf import text_format
-import time
 
 ###
 
@@ -40,7 +37,7 @@ def make_net(model_dir='bvlc_googlenet', net_basename='deploy.prototxt', caffemo
             caffe.set_device(GPU_ID)
             use_cuda = True
         except:
-            traceback.print_exc()
+            print_exc()
 
     caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
     model_path = caffe_root + 'models/' + model_dir + '/'
@@ -59,7 +56,7 @@ def make_net(model_dir='bvlc_googlenet', net_basename='deploy.prototxt', caffemo
     text_format.Merge(open(net_fn).read(), model)
     model.force_backward = True
 
-    new_model_file = tempfile.mktemp()
+    new_model_file = mktemp()
     open(new_model_file, 'w').write(str(model))
 
     net = caffe.Classifier(new_model_file, param_fn,
