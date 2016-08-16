@@ -1,20 +1,15 @@
 import os
-import argparse
 
-parser = argparse.ArgumentParser(description='catalog html maker')
-parser.add_argument('catalogue_dir', type=str)
+def make_catalogue(catalogue_dir):
 
-args = parser.parse_args()
+    # make catalogue.html
 
-output_dir=args.catalogue_dir
+    files = [v for v in os.listdir(catalogue_dir) if v.endswith('.jpg')]
+    files.sort()
 
-# make catalogue.html
-files = [v for v in os.listdir(output_dir) if v.endswith('.jpg')]
-files.sort()
+    files_list = ','.join(files)
 
-files_list = ','.join(files)
-
-html = """
+    html = """
 <script>
 var files_list = '""" + files_list + """';
 var files = files_list.split(',');
@@ -64,7 +59,15 @@ document.addEventListener('DOMContentLoaded', function(ev) {
 </body>
 """
 
-open(os.path.join(output_dir, 'catalogue.html'),'wb').write(html)
+    open(os.path.join(catalogue_dir, 'catalogue.html'),'wb').write(html)
+
+if '__main__' == __name__:
+    import argparse
+    parser = argparse.ArgumentParser(description='catalog html maker')
+    parser.add_argument('catalogue_dir', type=str)
+    args = parser.parse_args()
+    catalogue_dir=args.catalogue_dir
+    make_catalogue(catalogue_dir)
 
 # Emacs:
 # Local Variables:
