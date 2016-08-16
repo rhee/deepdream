@@ -1,9 +1,15 @@
 import os
+import argparse
 
-output_dir = 'layers'
+parser = argparse.ArgumentParser(description='catalog html maker')
+parser.add_argument('catalogue_dir', type=str)
+
+args = parser.parse_args()
+
+output_dir=args.catalogue_dir
 
 # make catalogue.html
-files = [os.path.join(output_dir, v) for v in os.listdir(output_dir) if v.endswith('.jpg')]
+files = [v for v in os.listdir(output_dir) if v.endswith('.jpg')]
 files.sort()
 
 files_list = ','.join(files)
@@ -58,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function(ev) {
 </body>
 """
 
-open('catalogue.html','wb').write(html)
+open(os.path.join(output_dir, 'catalogue.html'),'wb').write(html)
 
 # Emacs:
 # Local Variables:

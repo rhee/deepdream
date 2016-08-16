@@ -4,9 +4,6 @@
 from __future__ import print_function
 import sys, os
 
-caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
-use_cuda = os.getenv('USE_CUDA')
-
 import traceback
 import argparse
 
@@ -22,22 +19,14 @@ import nperf
 
 ###
 
-caffe_python_path = caffe_root + 'python'
-if caffe_python_path not in sys.path:
-    sys.path.insert(0, caffe_python_path)
+# def _env_init():
+#     caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
+#     caffe_python_path = caffe_root + 'python'
+#     if caffe_python_path not in sys.path:
+#         sys.path.insert(0, caffe_python_path)
+# _env_init()
 
 import caffe
-
-if use_cuda:
-    sys.stderr.write('USE_CUDA' + '\n')
-    # try enable GPU
-    try:
-        GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
-        caffe.set_mode_gpu()
-        caffe.set_device(GPU_ID)
-        use_cuda = True
-    except:
-        traceback.print_exc()
 
 ###
 
@@ -114,16 +103,27 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
     return deprocess(net, src.data[0])
 
 
-def make_net():
+def make_net(model_dir, net_basename, param_basename):
     # Patching model to be able to compute gradients.
     # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
 
-    model_path = caffe_root + 'models/bvlc_googlenet/' # substitute your path here
-    net_fn   = model_path + 'deploy.prototxt'
-    param_fn = model_path + 'bvlc_googlenet.caffemodel'
+    if os.getenv('USE_CUDA'):
+        sys.stderr.write('*** USE_CUDA ***' + '\n')
+        # try enable GPU
+        try:
+            GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
+            caffe.set_mode_gpu()
+            caffe.set_device(GPU_ID)
+            use_cuda = True
+        except:
+            traceback.print_exc()
 
-    #!(cd $CAFFE_ROOT ; scripts/download_model_binary.py models/bvlc_googlenet)
-    os.system('cd $CAFFE_ROOT; scripts/download_model_binary.py models/bvlc_googlenet')
+    caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
+    model_path = caffe_root + 'models/' + model_dir + '/'
+    net_fn   = model_path + net_basename
+    param_fn = model_path + param_basename
+
+    os.system('cd $CAFFE_ROOT; scripts/download_model_binary.py models/' + model_dir + '/')
 
     model = caffe.io.caffe_pb2.NetParameter()
     text_format.Merge(open(net_fn).read(), model)
@@ -140,11 +140,26 @@ def make_net():
 
 ####################
 
-net, _ = make_net()
+import argparse
 
-input_file = 'input01.jpg'
-output_dir = 'layers'
-amplify = 3
+parser = argparse.ArgumentParser(description='dump all patterns by layers')
+parser.add_argument('input_file', type=str, default='random.jpg')
+parser.add_argument('output_dir', type=str, default='layers')
+parser.add_argument('--amplify', type=int, default=3)
+parser.add_argument('--model_dir', type=str, default='bvlc_googlenet')
+parser.add_argument('--net_basename', type=str, default='deploy.prototxt')
+parser.add_argument('--param_basename', type=str, default='bvlc_googlenet.caffemodel')
+
+args = parser.parse_args()
+
+input_file = args.input_file
+output_dir = args.output_dir
+amplify = args.amplify
+model_dir = args.model_dir
+net_basename = args.net_basename
+param_basename = args.param_basename
+
+net, _ = make_net(model_dir, net_basename, param_basename)
 
 try: os.makedirs(output_dir)
 except: pass
@@ -156,8 +171,9 @@ PIL.Image.fromarray(np.uint8(img)).save(os.path.join(output_dir,output_file))
 
 i = 1
 for layer in net.blobs.keys():
+    frame = img.copy()
     try:
-        frame = img.copy()
+        print('layer:',layer)
         for amplify_i in xrange(amplify):
             frame = deepdream(net, frame, end=layer, objective=objective_L2)
         output_file = '%03d_%s.jpg' % (i,layer.replace('/','_'),)
@@ -166,17 +182,64 @@ for layer in net.blobs.keys():
         i += 1
     except:
         traceback.print_exc()
+    del frame
 
 # make catalogue.html
-files_list = ','.join([os.path.join(output_dir, v) for v in os.listdir(output_dir) if v.endswith('.jpg')])
+files = [v for v in os.listdir(output_dir) if v.endswith('.jpg')]
+files.sort()
+files_list = ','.join(files)
 
-from urllib import quote
-url = 'catalogue.template.html#' + quote(files_list)
-open('catalogue.html','w').write('''
-<iframe style="width:100%;border:0;overflow:hidden;" src="''' + url + '''"
-  onload="javascript:this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px'">
-</iframe>
-''')
+html = """
+<script>
+var files_list = '""" + files_list + """';
+var files = files_list.split(',');
+</script>
+<style>
+.catalogue {
+    width: 95%;
+    height: auto;
+}
+
+.catalogue-entry {
+    display: inline-block;
+    list-style: none inside;
+}
+
+.catalogue-entry img {
+    width: 220px;
+}
+
+.catalogue-entry figcaption {
+    font-size: 0.5rem;
+}
+
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function(ev) {
+  //var files = decodeURIComponent(location.hash.substr(1)).split(',');
+  var catalogue = document.querySelector('#catalogue');
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    var shortname = file.split('/')[1];
+    var li = document.createElement('li');
+    li.className = 'catalogue-entry';
+    li.innerHTML = '<figure><img src="' + file + '"></img><figcaption>' + shortname + '</figcaption></figure>';
+    catalogue.appendChild(li);
+  }
+});
+</script>
+<table border="0">
+    <tr>
+        <td>
+<ul id='catalogue' class='catalogue'>
+</ul>
+        </td>
+    </tr>
+    </table>
+</body>
+"""
+
+open(os.path.join(output_dir,'00catalogue.html'),'wb').write(html)
 
 # Emacs:
 # Local Variables:
