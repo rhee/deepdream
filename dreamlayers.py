@@ -59,26 +59,27 @@ if '__main__' == __name__:
     ]
 
     i = 1
-    for layer in net._layer_names: # net.blobs.keys():
-        try:
-            output_file = '%03d_%s.jpg' % (i, layer.replace('/', '_'),)
-            # skip if already created in prev session
-            if os.path.exists(os.path.join(output_dir,output_file)):
+    for layer in net.blobs.keys():
+        if layer in net._layer_names:
+            try:
+                output_file = '%03d_%s.jpg' % (i, layer.replace('/', '_'),)
+                # skip if already created in prev session
+                if os.path.exists(os.path.join(output_dir,output_file)):
+                    i += 1
+                    continue
+                if layer in blacklist_layers:
+                    print('skip:', layer)
+                    continue
+                print('layer:', layer, output_file)
+                frame = img.copy()
+                for amplify_i in xrange(amplify):
+                    frame = deepdream(net, frame, end=layer, objective=objective_L2)
+                PIL.Image.fromarray(np.uint8(frame)).save(os.path.join(output_dir,output_file))
                 i += 1
-                continue
-            if layer in blacklist_layers:
-                print('skip:', layer)
-                continue
-            print('layer:', layer, output_file)
-            frame = img.copy()
-            for amplify_i in xrange(amplify):
-                frame = deepdream(net, frame, end=layer, objective=objective_L2)
-            PIL.Image.fromarray(np.uint8(frame)).save(os.path.join(output_dir,output_file))
-            i += 1
-        except KeyboardInterrupt:
-            os.exit(1)
-        except:
-            print_exc()
+            except KeyboardInterrupt:
+                os.exit(1)
+            except:
+                print_exc()
 
     make_catalogue(output_dir)
 

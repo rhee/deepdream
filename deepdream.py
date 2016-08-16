@@ -24,7 +24,7 @@ import caffe
 
 ###
 
-def make_net(model_dir='bvlc_googlenet', net_basename='deploy.prototxt', caffemodel='*.caffemodel'):
+def make_net(model_dir='bvlc_googlenet', prototxt='deploy.prototxt', caffemodel='*.caffemodel'):
     # Patching model to be able to compute gradients.
     # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
 
@@ -41,7 +41,7 @@ def make_net(model_dir='bvlc_googlenet', net_basename='deploy.prototxt', caffemo
 
     caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
     model_path = caffe_root + 'models/' + model_dir + '/'
-    net_fn   = model_path + net_basename
+    net_fn   = model_path + prototxt
 
     if '*.caffemodel' == caffemodel:
         param_files = [f for f in os.listdir(os.path.join(caffe_root,'models',model_dir)) if f.endswith('.caffemodel')]
