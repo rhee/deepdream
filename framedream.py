@@ -8,7 +8,7 @@ import numpy as np
 import PIL.Image
 import scipy.ndimage as nd
 
-import deepdream
+from deepdream import make_net, objective_L2, make_objective_guided, deepdream
 import nperf
 
 def main(args):
@@ -19,13 +19,13 @@ def main(args):
     amplify = args.amplify
 
     model_dir = args.model_dir
-    net_basename = args.net_basename
-    param_basename = args.param_basename
+    prototxt = args.prototxt
+    caffemodel = args.caffemodel
 
     try: os.makedirs(output_dir)
     except: pass
 
-    net, model = deepdream.make_net(model_dir=model_dir, net_basename=net_basename, param_basename=param_basename)
+    net, model = make_net(model_dir=model_dir, prototxt=prototxt, caffemodel=caffemodel)
  
     # verify model name provided
     if not layer in net.blobs.keys():
@@ -50,7 +50,7 @@ def main(args):
     if i > 0:
         # make guide function from last image
         guide_image = np.float32(PIL.Image.open(os.path.join(input_dir,files[i-1])))
-        objective = deepdream.make_objective_guided(net, layer, guide_image)
+        objective = make_objective_guided(net, layer, guide_image)
     else:
         # make initial L2 guide function
         objective = objective_L2
@@ -74,10 +74,10 @@ def main(args):
         frame = np.float32(PIL.Image.open(input_file))
         print("processing:", f, frame.shape, layer, amplify)
         for short_i in xrange(amplify):
-            frame = deepdream.deepdream(net, frame, end=layer, objective=objective)
+            frame = deepdream(net, frame, end=layer, objective=objective)
             check2(perf_tag2)
         # use this frame as guide image for next iteration
-        objective = deepdream.make_objective_guided(net, layer, frame)
+        objective = make_objective_guided(net, layer, frame)
         PIL.Image.fromarray(np.uint8(frame)).save(output_file)
         i += 1
 
@@ -92,8 +92,8 @@ if '__main__' == __name__:
     parser.add_argument('--guide', type=str, default='', help='Guide image')
     parser.add_argument('--amplify', type=int, default=2)
     parser.add_argument('--model_dir', type=str, default='bvlc_googlenet')
-    parser.add_argument('--net_basename', type=str, default='deploy.prototxt')
-    parser.add_argument('--param_basename', type=str, default='bvlc_googlenet.caffemodel')
+    parser.add_argument('--prototxt', type=str, default='deploy.prototxt')
+    parser.add_argument('--caffemodel', type=str, default='*.caffemodel')
 
     args = parser.parse_args()
 

@@ -1,10 +1,10 @@
 import os
 
-def make_catalogue(catalogue_dir):
+def make_catalogue(image_dir):
 
     # make catalogue.html
 
-    files = [v for v in os.listdir(catalogue_dir) if v.endswith('.jpg')]
+    files = [v for v in os.listdir(image_dir) if v.endswith('.jpg')]
     files.sort()
 
     files_list = ','.join(files)
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function(ev) {
   var catalogue = document.querySelector('#catalogue');
   for (var i = 0; i < files.length; i++) {
     var file = files[i];
-    var shortname = file.split('/')[1];
+    var shortname = file; //file.split('/')[1];
     var li = document.createElement('li');
     li.className = 'catalogue-entry';
     li.innerHTML = '<figure><img src="' + file + '"></img><figcaption>' + shortname + '</figcaption></figure>';
@@ -59,15 +59,15 @@ document.addEventListener('DOMContentLoaded', function(ev) {
 </body>
 """
 
-    open(os.path.join(catalogue_dir, 'catalogue.html'),'wb').write(html)
+    open(os.path.join(image_dir, 'index.html'),'wb').write(html)
 
 if '__main__' == __name__:
     import argparse
     parser = argparse.ArgumentParser(description='catalog html maker')
-    parser.add_argument('catalogue_dir', type=str)
+    parser.add_argument('image_dir', type=str)
     args = parser.parse_args()
-    catalogue_dir=args.catalogue_dir
-    make_catalogue(catalogue_dir)
+    image_dir=args.image_dir
+    make_catalogue(image_dir)
 
 # Emacs:
 # Local Variables:

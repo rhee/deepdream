@@ -8,7 +8,7 @@ import numpy as np
 import PIL.Image
 import scipy.ndimage as nd
 
-import deepdream
+from deepdream import make_net, objective_L2, make_objective_guided, deepdream
 import nperf
 
 def main(args):
@@ -22,8 +22,8 @@ def main(args):
     guide = args.guide
 
     model_dir = args.model_dir
-    net_basename = args.net_basename
-    param_basename = args.param_basename
+    prototxt = args.prototxt
+    caffemodel = args.caffemodel
 
     try: os.makedirs(output_dir)
     except: pass
@@ -33,7 +33,7 @@ def main(args):
     print("Scale = %s" % scale)
     print("Model = %s" % layer)
 
-    net, model = deepdream.make_net(model_dir=model_dir, net_basename=net_basename, param_basename=param_basename)
+    net, model = make_net(model_dir=model_dir, prototxt=prototxt, caffemodel=caffemodel)
 
     prototxt = os.path.join(output_dir, 'prototxt')
     open(prototxt, 'w').write(str(model))
@@ -46,9 +46,9 @@ def main(args):
 
     if guide:
         guide_image = np.float32(PIL.Image.open(guide))
-        objective = deepdream.make_objective_guided(net, layer, guide_image)
+        objective = make_objective_guided(net, layer, guide_image)
     else:
-        objective = deepdream.objective_L2
+        objective = objective_L2
 
     ###
 
@@ -84,7 +84,7 @@ def main(args):
     print('####################################')
 
     while i <= iterations:
-        frame = deepdream.deepdream(net, frame, end=layer, objective=objective)
+        frame = deepdream(net, frame, end=layer, objective=objective)
         PIL.Image.fromarray(np.uint8(frame)).save(output_fn(i))
         # affine transform (zoom-in) before feed as next step input
         frame = nd.affine_transform(frame,[1 - scale, 1 - scale, 1],[h * scale / 2, w * scale / 2, 0],order=1)
@@ -105,8 +105,8 @@ if '__main__' == __name__:
     parser.add_argument('--scale', type=float, default=0.05)
     parser.add_argument('--guide', type=str, default=None)
     parser.add_argument('--model_dir', type=str, default='bvlc_googlenet')
-    parser.add_argument('--net_basename', type=str, default='deploy.prototxt')
-    parser.add_argument('--param_basename', type=str, default='bvlc_googlenet.caffemodel')
+    parser.add_argument('--prototxt', type=str, default='deploy.prototxt')
+    parser.add_argument('--caffemodel', type=str, default='*.caffemodel')
 
     args = parser.parse_args()
 

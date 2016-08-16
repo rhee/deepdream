@@ -27,6 +27,47 @@ import caffe
 
 ###
 
+def make_net(model_dir='bvlc_googlenet', net_basename='deploy.prototxt', caffemodel='*.caffemodel'):
+    # Patching model to be able to compute gradients.
+    # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
+
+    if os.getenv('USE_CUDA'):
+        sys.stderr.write('*** USE_CUDA ***' + '\n')
+        # try enable GPU
+        try:
+            GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
+            caffe.set_mode_gpu()
+            caffe.set_device(GPU_ID)
+            use_cuda = True
+        except:
+            traceback.print_exc()
+
+    caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
+    model_path = caffe_root + 'models/' + model_dir + '/'
+    net_fn   = model_path + net_basename
+
+    if '*.caffemodel' == caffemodel:
+        param_files = [f for f in os.listdir(os.path.join(caffe_root,'models',model_dir)) if f.endswith('.caffemodel')]
+        if len(param_files) > 0:
+            caffemodel = param_files[0]
+
+    param_fn = model_path + caffemodel
+
+    os.system('cd $CAFFE_ROOT; scripts/download_model_binary.py models/' + model_dir + '/')
+
+    model = caffe.io.caffe_pb2.NetParameter()
+    text_format.Merge(open(net_fn).read(), model)
+    model.force_backward = True
+
+    new_model_file = 'prototxt'
+    open(new_model_file, 'w').write(str(model))
+
+    net = caffe.Classifier(new_model_file, param_fn,
+                           mean = np.float32([104.0, 116.0, 122.0]), # ImageNet mean, training set dependent
+                           channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
+
+    return net, model
+
 # default objective
 def objective_L2(dst): dst.diff[:] = dst.data
 
@@ -98,40 +139,5 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
 
     # returning the resulting image
     return deprocess(net, src.data[0])
-
-def make_net(model_dir, net_basename, param_basename):
-    # Patching model to be able to compute gradients.
-    # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
-
-    if os.getenv('USE_CUDA'):
-        sys.stderr.write('*** USE_CUDA ***' + '\n')
-        # try enable GPU
-        try:
-            GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
-            caffe.set_mode_gpu()
-            caffe.set_device(GPU_ID)
-            use_cuda = True
-        except:
-            traceback.print_exc()
-
-    caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
-    model_path = caffe_root + 'models/' + model_dir + '/'
-    net_fn   = model_path + net_basename
-    param_fn = model_path + param_basename
-
-    os.system('cd $CAFFE_ROOT; scripts/download_model_binary.py models/' + model_dir + '/')
-
-    model = caffe.io.caffe_pb2.NetParameter()
-    text_format.Merge(open(net_fn).read(), model)
-    model.force_backward = True
-
-    new_model_file = 'prototxt'
-    open(new_model_file, 'w').write(str(model))
-
-    net = caffe.Classifier(new_model_file, param_fn,
-                           mean = np.float32([104.0, 116.0, 122.0]), # ImageNet mean, training set dependent
-                           channel_swap = (2,1,0)) # the reference model has channels in BGR order instead of RGB
-
-    return net, model
 
 # vim: set sw=4 sts=4 ts=8 et ft=python :
