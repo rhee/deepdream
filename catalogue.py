@@ -1,6 +1,18 @@
-<!DOCTYPE html>
-<html>
-<head>
+import os
+
+output_dir = 'layers'
+
+# make catalogue.html
+files = [os.path.join(output_dir, v) for v in os.listdir(output_dir) if v.endswith('.jpg')]
+files.sort()
+
+files_list = ','.join(files)
+
+html = """
+<script>
+var files_list = '""" + files_list + """';
+var files = files_list.split(',');
+</script>
 <style>
 .catalogue {
     width: 95%;
@@ -13,7 +25,7 @@
 }
 
 .catalogue-entry img {
-    width: 480px;
+    width: 220px;
 }
 
 .catalogue-entry figcaption {
@@ -23,7 +35,7 @@
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function(ev) {
-  var files = decodeURIComponent(location.hash.substr(1)).split(',');
+  //var files = decodeURIComponent(location.hash.substr(1)).split(',');
   var catalogue = document.querySelector('#catalogue');
   for (var i = 0; i < files.length; i++) {
     var file = files[i];
@@ -35,8 +47,6 @@ document.addEventListener('DOMContentLoaded', function(ev) {
   }
 });
 </script>
-</head>
-<body>
 <table border="0">
     <tr>
         <td>
@@ -46,4 +56,13 @@ document.addEventListener('DOMContentLoaded', function(ev) {
     </tr>
     </table>
 </body>
-</html>
+"""
+
+open('catalogue.html','wb').write(html)
+
+# Emacs:
+# Local Variables:
+# mode: python
+# c-basic-offset: 4
+# End:
+# vim: sw=4 sts=4 ts=8 et ft=python
