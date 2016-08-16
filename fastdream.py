@@ -35,8 +35,8 @@ def main(args):
 
     net, model = make_net(model_dir=model_dir, prototxt=prototxt, caffemodel=caffemodel)
 
-    prototxt = os.path.join(output_dir, 'prototxt')
-    open(prototxt, 'w').write(str(model))
+    #prototxt = os.path.join(output_dir, 'prototxt')
+    #open(prototxt, 'w').write(str(model))
 
     # verify model name provided
     if not layer in net.blobs.keys():

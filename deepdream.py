@@ -59,7 +59,7 @@ def make_net(model_dir='bvlc_googlenet', net_basename='deploy.prototxt', caffemo
     text_format.Merge(open(net_fn).read(), model)
     model.force_backward = True
 
-    new_model_file = 'prototxt'
+    new_model_file = tempfile.mktemp()
     open(new_model_file, 'w').write(str(model))
 
     net = caffe.Classifier(new_model_file, param_fn,
