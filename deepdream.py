@@ -13,14 +13,18 @@ from google.protobuf import text_format
 
 ###
 
-# def _env_init():
-#     caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
-#     caffe_python_path = caffe_root + 'python'
-#     if caffe_python_path not in sys.path:
-#         sys.path.insert(0, caffe_python_path)
-# _env_init()
-
 import caffe
+
+if os.getenv('USE_CUDA'):
+    sys.stderr.write('*** USE_CUDA ***' + '\n')
+    # try enable GPU
+    try:
+        GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
+        caffe.set_mode_gpu()
+        caffe.set_device(GPU_ID)
+        use_cuda = True
+    except:
+        print_exc()
 
 ###
 
@@ -28,29 +32,24 @@ def make_net(model_dir='bvlc_googlenet', prototxt='deploy.prototxt', caffemodel=
     # Patching model to be able to compute gradients.
     # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
 
-    if os.getenv('USE_CUDA'):
-        sys.stderr.write('*** USE_CUDA ***' + '\n')
-        # try enable GPU
-        try:
-            GPU_ID = 0 # Switch between 0 and 1 depending on the GPU you want to use.
-            caffe.set_mode_gpu()
-            caffe.set_device(GPU_ID)
-            use_cuda = True
-        except:
-            print_exc()
+    # handle relative path
+    if not model_dir.startswith('/'):
+        caffe_root = os.getenv('CAFFE_ROOT')
+        model_path = os.path.join(caffe_root,'models',model_dir)
+        os.system('cd %s; scripts/download_model_binary.py %s/' % (caffe_root, model_path,))
+    else:
+        model_path = model_dir
 
-    caffe_root = os.getenv('CAFFE_ROOT') # this file should be run from {caffe_root}/examples (otherwise change this line)
-    model_path = caffe_root + 'models/' + model_dir + '/'
-    net_fn   = model_path + prototxt
+    net_fn   = os.path.join(model_path,prototxt)
 
+    # handle wildcard
     if '*.caffemodel' == caffemodel:
-        param_files = [f for f in os.listdir(os.path.join(caffe_root,'models',model_dir)) if f.endswith('.caffemodel')]
+        param_files = [f for f in os.listdir(model_path) if f.endswith('.caffemodel')]
         if len(param_files) > 0:
+            # select first one if multple caffemodels exist
             caffemodel = param_files[0]
 
-    param_fn = model_path + caffemodel
-
-    os.system('cd $CAFFE_ROOT; scripts/download_model_binary.py models/' + model_dir + '/')
+    param_fn = os.path.join(model_path,caffemodel)
 
     model = caffe.io.caffe_pb2.NetParameter()
     text_format.Merge(open(net_fn).read(), model)

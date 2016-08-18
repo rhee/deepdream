@@ -77,7 +77,7 @@ if '__main__' == __name__:
                 PIL.Image.fromarray(np.uint8(frame)).save(os.path.join(output_dir,output_file))
                 i += 1
             except KeyboardInterrupt:
-                os.exit(1)
+                sys.exit(1)
             except:
                 print_exc()
 
