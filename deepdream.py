@@ -32,14 +32,15 @@ def make_net(model_dir='bvlc_googlenet', prototxt='deploy.prototxt', caffemodel=
     # Patching model to be able to compute gradients.
     # Note that you can also manually add "force_backward: true" line to "deploy.prototxt".
 
-    # handle relative path
-    if not model_dir.startswith('/'):
-        caffe_root = os.getenv('CAFFE_ROOT')
-        model_path = os.path.join(caffe_root,'models',model_dir)
-        os.system('cd %s; scripts/download_model_binary.py %s/' % (caffe_root, model_path,))
-    else:
-        model_path = model_dir
+    ## handle relative path
+    #if not model_dir.startswith('/'):
+    #    caffe_root = os.getenv('CAFFE_ROOT')
+    #    model_path = os.path.join(caffe_root,'models',model_dir)
+    #    os.system('cd %s; scripts/download_model_binary.py %s/' % (caffe_root, model_path,))
+    #else:
+    #    model_path = model_dir
 
+    model_path = model_dir
     net_fn   = os.path.join(model_path,prototxt)
 
     # handle wildcard
