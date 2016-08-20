@@ -3,8 +3,6 @@
 
 from __future__ import print_function
 import sys, os
-
-import argparse
 from traceback import print_exc
 
 import numpy as np
@@ -13,7 +11,12 @@ import PIL.Image
 from deepdream import make_net, deepdream, objective_L2
 from catalogue import make_catalogue
 
+import nperf
+
 if '__main__' == __name__:
+
+    import argparse
+
     parser = argparse.ArgumentParser(description='dump all patterns by layers')
     parser.add_argument('input_file', type=str, default='random.jpg')
     parser.add_argument('output_dir', type=str, default='layers')
@@ -56,7 +59,10 @@ if '__main__' == __name__:
         'ip3',
         'ip4',
         'ip5',
+        'pool5',
     ]
+
+    check2 = nperf.nperf(interval = 30.0, maxcount = (len(net.blobs.keys()) * amplify))
 
     i = 1
     for layer in net.blobs.keys():
@@ -74,6 +80,7 @@ if '__main__' == __name__:
                 frame = img.copy()
                 for amplify_i in xrange(amplify):
                     frame = deepdream(net, frame, end=layer, objective=objective_L2)
+                    check2("dreamlayers")
                 PIL.Image.fromarray(np.uint8(frame)).save(os.path.join(output_dir,output_file))
                 i += 1
             except KeyboardInterrupt:
