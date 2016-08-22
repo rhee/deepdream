@@ -60,6 +60,7 @@ if '__main__' == __name__:
         'ip4',
         'ip5',
         'pool5',
+        'fc1000',
     ]
 
     check2 = nperf.nperf(interval = 30.0, maxcount = (len(net.blobs.keys()) * amplify))
